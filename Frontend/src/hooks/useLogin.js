@@ -22,6 +22,7 @@ export const useLogin = () => {
 
       // Save the user details to localStorage
       localStorage.setItem('user', JSON.stringify(json));
+      localStorage.setItem('token', json.token);
 
       // Update the global auth context with the logged-in user
       dispatch({ type: 'LOGIN', payload: json });

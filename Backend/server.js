@@ -12,6 +12,7 @@ const { authMiddleware, authorizeRoles } = require('./middlewares/authMiddleware
 const cors = require('cors');
 const cron = require('node-cron'); 
 const Project = require('./models/projectModel'); 
+const chatRoutes = require('./routes/chatRoute');
 
 const app = express();
 
@@ -23,27 +24,23 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use(cors({
-  origin: ' http://localhost:5173', 
+  origin: 'http://localhost:5173', 
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], 
-  allowedHeaders: ['Content-Type', 'Authorization'], 
+  allowedHeaders: ['Content-Type', 'Connection', 'Cache-Control', 'Authorization'], 
   credentials: true, 
   optionsSuccessStatus: 200, 
 }));
 
-
 app.use('/api/user', userRoutes);
-
-
 app.use('/api/materials', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), materialRoutes);
 app.use('/api/locations', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), locationRoutes);
 app.use('/api/templates', authMiddleware, authorizeRoles(['designEngineer', 'admin']), templatesRoutes);
 app.use('/api/bom', authMiddleware, authorizeRoles(['designEngineer', 'admin']), bomRoutes);
 app.use('/api/project', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), projectRoutes);
 app.use('/api/preprojects', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), preprojectRoutes);
+app.use('/api/chat', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), chatRoutes);
 
-// Function to calculate and update project progress
 const updateDailyProgress = async () => {
   try {
     const ongoingProjects = await Project.find({ status: 'ongoing' });
@@ -51,37 +48,29 @@ const updateDailyProgress = async () => {
 
     for (const project of ongoingProjects) {
       console.log(`Updating progress for project: ${project.name}`);
-
-      // Recalculate progress using the `applyHybridProgress` method
       project.applyHybridProgress();
       await project.save();
-
       console.log(`Updated progress for project "${project.name}" to ${project.progress}%`);
     }
-
     console.log("All ongoing projects have been updated successfully.");
   } catch (error) {
     console.error("Error updating project progress:", error);
   }
 };
 
-
-
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log('Connected to DB and listening on ' + process.env.PORT);
-      
-
-      
-      cron.schedule('0 0 * * *', () => {
-        console.log("Running daily project progress update...");
-        updateDailyProgress();
-      }, {
-        timezone: "Asia/Manila" 
-      });
+.then(() => {
+  app.listen(process.env.PORT, () => {
+    console.log('Connected to DB and listening on ' + process.env.PORT);
+    
+    cron.schedule('0 0 * * *', () => {
+      console.log("Running daily project progress update...");
+      updateDailyProgress();
+    }, {
+      timezone: "Asia/Manila" 
     });
-  })
-  .catch((error) => {
-    console.log(error);
   });
+})
+.catch((error) => {
+  console.log(error);
+});

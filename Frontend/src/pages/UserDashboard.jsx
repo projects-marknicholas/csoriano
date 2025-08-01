@@ -98,6 +98,8 @@ const UserDashboard = () => {
     }
   };
 
+  console.log(projects);
+
   return (
     <>
       <Navbar />
