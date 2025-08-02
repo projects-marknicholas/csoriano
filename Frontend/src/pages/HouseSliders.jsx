@@ -6,28 +6,28 @@ import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
 const HouseSliders = () => {
-  const [preprojects, setPreprojects] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [minBudget, setMinBudget] = useState("");
   const [maxBudget, setMaxBudget] = useState("");
   const { user } = useAuthContext();
 
-  // Fetch all preprojects from the backend
+  // Fetch all projects from the backend
   useEffect(() => {
-    const fetchPreprojects = async () => {
+    const fetchProjects = async () => {
       try {
-        const response = await axios.get("http://localhost:4000/api/preprojects", {
+        const response = await axios.get("http://localhost:4000/api/project/contractor", {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
         });
-        setPreprojects(response.data);
-        setFilteredProjects(response.data); // Initialize the filtered list
+        setProjects(response.data);
+        setFilteredProjects(response.data.filter(project => project.status === "finished"));
       } catch (error) {
-        console.error("Error fetching preprojects:", error);
+        console.error("Error fetching projects:", error);
       }
     };
-    fetchPreprojects();
+    fetchProjects();
   }, [user]);
 
   // Handle the filter logic
@@ -35,10 +35,11 @@ const HouseSliders = () => {
     const min = parseInt(minBudget, 10) || 0;
     const max = parseInt(maxBudget, 10) || Infinity;
 
-    const filtered = preprojects.filter(
+    const filtered = projects.filter(
       (project) =>
-        project.bom.totalProjectCost >= min &&
-        project.bom.totalProjectCost <= max
+        project.bom?.markedUpCosts?.totalProjectCost >= min &&
+        project.bom?.markedUpCosts?.totalProjectCost <= max &&
+        project.status === "finished"
     );
     setFilteredProjects(filtered);
   };
@@ -46,12 +47,12 @@ const HouseSliders = () => {
   // Validation to ensure values are non-negative
   const handleMinBudgetChange = (e) => {
     const value = e.target.value;
-    setMinBudget(value < 0 ? "0" : value); // Prevent negative input
+    setMinBudget(value < 0 ? "0" : value);
   };
 
   const handleMaxBudgetChange = (e) => {
     const value = e.target.value;
-    setMaxBudget(value < 0 ? "0" : value); // Prevent negative input
+    setMaxBudget(value < 0 ? "0" : value);
   };
 
   const budgetOptions = [
@@ -126,39 +127,43 @@ const HouseSliders = () => {
           {filteredProjects.length > 0 ? (
             filteredProjects.map((project) => (
               <Link
-                to={`/projects/${project._id}`} // Navigate to the project details page
+                to={`/projects/${project._id}`}
                 key={project._id}
                 className={styles.projectCard}
               >
-                <img
-                  src={
-                    project.image && project.image.length > 0
-                      ? project.image[0].path
-                      : "/placeholder.jpg"
-                  }
-                  alt={project.title || "Project Image"}
-                  className={styles.projectImage}
-                />
+                <div className={styles.projectImageContainer}>
+                  {project.floors?.[0]?.images?.[0]?.path ? (
+                    <img
+                      src={project.floors[0].images[0].path}
+                      alt={project.name || "Project Image"}
+                      className={styles.projectImage}
+                    />
+                  ) : (
+                    <div className={styles.projectImagePlaceholder}>
+                      No Image Available
+                    </div>
+                  )}
+                </div>
                 <div className={styles.projectDetails}>
-                  <h3>{project.title}</h3>
+                  <h3>{project.name}</h3>
                   <p>
-                    <strong>Total Area:</strong> {project.bom.totalArea} sqm
+                    <strong>Total Area:</strong> {project.totalArea} sqm
                   </p>
                   <p>
-                    <strong>Number of Floors:</strong> {project.bom.numFloors}
+                    <strong>Number of Floors:</strong> {project.numFloors}
                   </p>
                   <p>
-                    <strong>Room Count:</strong> {project.bom.roomCount}
+                    <strong>Room Count:</strong> {project.roomCount}
                   </p>
                   <p>
                     <strong>Total Project Cost:</strong> ₱
-                    {project.bom.totalProjectCost.toLocaleString()}
+                    {project.bom?.markedUpCosts?.totalProjectCost?.toLocaleString() || "N/A"}
                   </p>
                 </div>
               </Link>
             ))
           ) : (
-            <p>No projects found within the specified budget range.</p>
+            <p>No finished projects found within the specified budget range.</p>
           )}
         </div>
       </div>

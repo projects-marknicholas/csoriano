@@ -37,6 +37,11 @@ const imageSchema = new mongoose.Schema({
 const PreprojectSchema = new schema({
   title: { type: String, required: true },
   type: { type: String, enum: ["residential"], required: true },
+  status: { 
+    type: String, 
+    enum: ["ongoing", "finished"], 
+    default: "ongoing" 
+  },
   image: [imageSchema],
   bom: bomSchema,
 }, { timestamps: true });

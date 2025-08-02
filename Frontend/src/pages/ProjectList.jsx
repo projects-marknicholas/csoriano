@@ -1480,7 +1480,7 @@ const ProjectList = () => {
                     <TableRow>
                       <TableCell>Project Name</TableCell>
                       <TableCell>Project Owner</TableCell>
-                      <TableCell>Project Contractor</TableCell>
+                      <TableCell>Project Design Engineer</TableCell>
                       <TableCell>Date Created</TableCell>
                       <TableCell>Cost Tier</TableCell>
                       <TableCell>Status</TableCell>
@@ -1488,7 +1488,7 @@ const ProjectList = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProjects.map((project) => (
+                    {filteredProjects.filter(project => project.status !== "finished").map((project) => (
                       <TableRow key={project._id} hover>
                         <TableCell
                           onClick={() => handleViewProjectDetails(project)}
