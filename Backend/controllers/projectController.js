@@ -161,12 +161,12 @@ const createProject = async (req, res) => {
     avgFloorHeight,
     roomCount,
     foundationDepth,
+    projectImage, // Add this field
   } = req.body;
 
   console.log(name);
   try {
     // Fetch contractor and user by username
-
     const contractorObject = await User.findOne({ Username: contractor });
     const userObject = await User.findOne({ Username: user });
 
@@ -227,6 +227,7 @@ const createProject = async (req, res) => {
       avgFloorHeight,
       roomCount,
       foundationDepth,
+      projectImage, // Add this field
       status: "not started",
       startDate: now,
       referenceDate: now,
@@ -541,19 +542,132 @@ const updateProject = async (req, res) => {
     if (!project)
       return res.status(404).json({ message: "Project not found." });
 
-    // Apply the changes from req.body
-    Object.assign(project, req.body);
+    // Extract fields from req.body
+    const {
+      name,
+      user,
+      template,
+      location,
+      totalArea,
+      avgFloorHeight,
+      roomCount,
+      foundationDepth,
+      timeline,
+      projectImage,
+      floors,
+      // Add other fields as needed
+    } = req.body;
 
-    // Optionally update hybrid progress calculation if needed
-    const updatedProject = applyHybridProgress(project);
+    // Update basic project information
+    if (name !== undefined) project.name = name;
+    if (user !== undefined) project.user = user;
+    if (template !== undefined) project.template = template;
+    if (location !== undefined) project.location = location;
+    if (totalArea !== undefined) project.totalArea = totalArea;
+    if (avgFloorHeight !== undefined) project.avgFloorHeight = avgFloorHeight;
+    if (roomCount !== undefined) project.roomCount = roomCount;
+    if (foundationDepth !== undefined) project.foundationDepth = foundationDepth;
+    if (timeline !== undefined) project.timeline = timeline;
+    if (projectImage !== undefined) project.projectImage = projectImage; // Handle Cloudinary URL
 
-    await updatedProject.save();
-    res.status(200).json({ project: updatedProject }); // Ensure the response has a consistent structure
+    // Update floors if provided
+    if (floors !== undefined && Array.isArray(floors)) {
+      // For each floor in the request
+      floors.forEach((floorData, floorIndex) => {
+        // Find the corresponding floor in the project
+        const projectFloor = project.floors.id(floorData._id) || project.floors[floorIndex];
+        
+        if (projectFloor) {
+          // Update floor properties
+          if (floorData.name !== undefined) projectFloor.name = floorData.name;
+          if (floorData.progress !== undefined) projectFloor.progress = floorData.progress;
+          if (floorData.isManual !== undefined) projectFloor.isManual = floorData.isManual;
+          if (floorData.complexityWeight !== undefined) projectFloor.complexityWeight = floorData.complexityWeight;
+          
+          // Update floor images if provided
+          if (floorData.images !== undefined && Array.isArray(floorData.images)) {
+            projectFloor.images = floorData.images;
+          }
+          
+          // Update tasks if provided
+          if (floorData.tasks !== undefined && Array.isArray(floorData.tasks)) {
+            floorData.tasks.forEach((taskData, taskIndex) => {
+              // Find the corresponding task in the floor
+              const floorTask = projectFloor.tasks.id(taskData._id) || projectFloor.tasks[taskIndex];
+              
+              if (floorTask) {
+                // Update task properties
+                if (taskData.name !== undefined) floorTask.name = taskData.name;
+                if (taskData.progress !== undefined) floorTask.progress = taskData.progress;
+                if (taskData.isManual !== undefined) floorTask.isManual = taskData.isManual;
+                if (taskData.complexityWeight !== undefined) floorTask.complexityWeight = taskData.complexityWeight;
+                
+                // Update task images if provided
+                if (taskData.images !== undefined && Array.isArray(taskData.images)) {
+                  floorTask.images = taskData.images;
+                }
+              } else if (taskData._id === undefined) {
+                // This is a new task, add it
+                projectFloor.tasks.push({
+                  name: taskData.name || "",
+                  progress: taskData.progress || 0,
+                  isManual: taskData.isManual || false,
+                  complexityWeight: taskData.complexityWeight || 1,
+                  images: taskData.images || [],
+                });
+              }
+            });
+            
+            // Remove tasks that are not in the request
+            const requestedTaskIds = floorData.tasks
+              .map(task => task._id)
+              .filter(id => id !== undefined);
+              
+            projectFloor.tasks = projectFloor.tasks.filter(task => 
+              !task._id || requestedTaskIds.includes(task._id.toString())
+            );
+          }
+        } else if (floorData._id === undefined) {
+          // This is a new floor, add it
+          project.floors.push({
+            name: floorData.name || `FLOOR ${project.floors.length + 1}`,
+            progress: floorData.progress || 0,
+            isManual: floorData.isManual || false,
+            complexityWeight: floorData.complexityWeight || 1,
+            images: floorData.images || [],
+            tasks: floorData.tasks || [],
+          });
+        }
+      });
+      
+      // Remove floors that are not in the request
+      const requestedFloorIds = floors
+        .map(floor => floor._id)
+        .filter(id => id !== undefined);
+        
+      project.floors = project.floors.filter(floor => 
+        !floor._id || requestedFloorIds.includes(floor._id.toString())
+      );
+    }
+
+    // Apply hybrid progress calculation
+    project.applyHybridProgress();
+
+    await project.save();
+    
+    // Populate the template if needed before sending response
+    const populatedProject = await Project.findById(project._id).populate('template');
+    
+    res.status(200).json({ 
+      success: true, 
+      project: populatedProject 
+    });
   } catch (error) {
     console.error("Error updating project:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to update project.", details: error.message });
+    res.status(500).json({ 
+      error: "Failed to update project.", 
+      details: error.message 
+    });
   }
 };
 

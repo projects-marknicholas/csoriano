@@ -13,12 +13,34 @@ const userSchema = new Schema({
     required: true,
     minlength: 8
   },
+  Firstname: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  Lastname: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  Address: {
+    type: String,
+    required: true,
+    trim: true
+  },
   role: {
     type: String,
-    enum: ['admin', 'user', 'designEngineer'],
-    required: true
+    enum: ['user'], 
+    required: true,
+    default: 'user'
   },
-  forgotPassword: { type: Boolean, default: false },
+  forgotPassword: { 
+    type: Boolean, 
+    default: false 
+  }
 }, {timestamps: true})
+
+// Create a compound index to ensure Firstname + Lastname combination is unique
+userSchema.index({ Firstname: 1, Lastname: 1 }, { unique: true })
 
 module.exports = mongoose.model('User', userSchema)

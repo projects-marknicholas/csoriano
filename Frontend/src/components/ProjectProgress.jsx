@@ -34,7 +34,7 @@ const ProjectProgress = () => {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await axios.get(`http://localhost:4000/api/project/${projectId}`, {
+        const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}`, {
           headers: {
             Authorization: `Bearer ${user?.token}`,
           },

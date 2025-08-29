@@ -17,7 +17,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const checkDefaultPassword = async () => {
       try {
-        const response = await axios.get(`http://localhost:4000/api/user/is-default-password`, {
+        const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/user/is-default-password`, {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
@@ -41,7 +41,7 @@ const AdminDashboard = () => {
   const handlePasswordChange = async (newPassword) => {
     setIsSubmitting(true);
     try {
-      await axios.patch(`http://localhost:4000/api/user/change-password`, { newPassword }, {
+      await axios.patch(`${import.meta.env.VITE_LOCAL_URL}/api/user/change-password`, { newPassword }, {
         headers: {
           Authorization: `Bearer ${user.token}`
         }

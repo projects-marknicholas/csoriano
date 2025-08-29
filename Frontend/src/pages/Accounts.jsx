@@ -29,8 +29,10 @@ import CloseIcon from "@mui/icons-material/Close";
 
 const Accounts = () => {
   const [formData, setFormData] = useState({
-    Username: "",
-    role: "",
+    Firstname: "",
+    Lastname: "",
+    Address: "",
+    role: "user",
     password: "",
   });
   const [users, setUsers] = useState([]);
@@ -64,7 +66,7 @@ const Accounts = () => {
     if (!user || !user.token) return;
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:4000/api/user`, {
+      const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/user`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
 
@@ -94,7 +96,7 @@ const Accounts = () => {
     // Filter by search query
     if (searchQuery) {
       tempUsers = tempUsers.filter((user) =>
-        user.Username.toLowerCase().includes(searchQuery.toLowerCase())
+        `${user.Firstname} ${user.Lastname}`.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -116,15 +118,19 @@ const Accounts = () => {
     event.preventDefault();
 
     try {
+      // Create username from firstname and lastname
+      const username = `${formData.Firstname.toLowerCase()}${formData.Lastname.toLowerCase()}`;
+
       const result = await signup(
-        formData.Username,
-        formData.password,
-        formData.role
+        formData.password,  
+        formData.Firstname, 
+        formData.Lastname, 
+        formData.Address
       );
 
       if (result && result.user) {
         setShowCreateModal(false);
-        setFormData({ Username: "", role: "", password: "" });
+        setFormData({ Firstname: "", Lastname: "", Address: "", role: "user", password: "" });
 
         await fetchUsers();
         showAlert("Success", "User account created successfully.", "success");
@@ -157,7 +163,7 @@ const Accounts = () => {
 
     try {
       await axios.patch(
-        `http://localhost:4000/api/user/reset-password/${selectedUserId}`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/user/reset-password/${selectedUserId}`,
         {},
         {
           headers: { Authorization: `Bearer ${user.token}` },
@@ -202,7 +208,7 @@ const Accounts = () => {
         </Typography>
         <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
           <TextField
-            label="Search by Username"
+            label="Search by Name"
             variant="outlined"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -221,7 +227,7 @@ const Accounts = () => {
         </Box>
 
         <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-          {["admin", "user", "designEngineer", "All"].map((role) => (
+          {["All", "user"].map((role) => (
             <Button
               key={role}
               variant={filterRole === role ? "contained" : "outlined"}
@@ -251,7 +257,10 @@ const Accounts = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Username</TableCell>
+                  <TableCell>UserName</TableCell>
+                  <TableCell>First Name</TableCell>
+                  <TableCell>Last Name</TableCell>
+                  <TableCell>Address</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Forgot Password</TableCell>
                   <TableCell>Actions</TableCell>
@@ -261,6 +270,9 @@ const Accounts = () => {
                 {filteredUsers.map((user) => (
                   <TableRow key={user._id}>
                     <TableCell>{user.Username}</TableCell>
+                    <TableCell>{user.Firstname}</TableCell>
+                    <TableCell>{user.Lastname}</TableCell>
+                    <TableCell>{user.Address}</TableCell>
                     <TableCell>
                       {user.role
                         ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
@@ -314,36 +326,45 @@ const Accounts = () => {
           </Box>
           <form onSubmit={handleSubmit}>
             <TextField
-              label="Username"
+              label="First Name"
               variant="outlined"
               fullWidth
               sx={{ mt: 2 }}
-              value={formData.Username}
+              value={formData.Firstname}
               onChange={(e) =>
-                setFormData({ ...formData, Username: e.target.value })
+                setFormData({ ...formData, Firstname: e.target.value })
               }
               required
             />
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel id="role-select-label">Role</InputLabel>
-              <Select
-                labelId="role-select-label"
-                label="Role"
-                value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
-                required
-              >
-                <MenuItem value="admin">Admin</MenuItem>
-                <MenuItem value="user">Client</MenuItem>
-                <MenuItem value="designEngineer">DesignEngineer</MenuItem>
-              </Select>
-            </FormControl>
+
+            <TextField
+              label="Last Name"
+              variant="outlined"
+              fullWidth
+              sx={{ mt: 2 }}
+              value={formData.Lastname}
+              onChange={(e) =>
+                setFormData({ ...formData, Lastname: e.target.value })
+              }
+              required
+            />
+
+            <TextField
+              label="Address"
+              variant="outlined"
+              fullWidth
+              sx={{ mt: 2 }}
+              value={formData.Address}
+              onChange={(e) =>
+                setFormData({ ...formData, Address: e.target.value })
+              }
+              required
+            />
 
             <TextField
               label="Password"
               variant="outlined"
+              type="password"
               fullWidth
               sx={{ mt: 2 }}
               value={formData.password}
@@ -352,6 +373,7 @@ const Accounts = () => {
               }
               required
             />
+
             <Button
               type="submit"
               variant="contained"

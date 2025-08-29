@@ -127,7 +127,7 @@ const Templates = () => {
   
     try {
       setIsLoading(true);
-      const response = await axios.get(`http://localhost:4000/api/templates`, {
+      const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/templates`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
   
@@ -160,7 +160,7 @@ const Templates = () => {
   // Fetch details of a specific template
 const fetchTemplateDetails = async (templateId) => {
   try {
-    const response = await axios.get(`http://localhost:4000/api/templates/${templateId}`, {
+    const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/templates/${templateId}`, {
       headers: { Authorization: `Bearer ${user.token}` },
     });
     setSelectedTemplate(response.data.template);
@@ -177,7 +177,7 @@ const handleRemoveMaterial = async (categoryName, description) => {
     const encodedDescription = encodeURIComponent(description);
 
     await axios.delete(
-      `http://localhost:4000/api/templates/${templateId}/categories/${categoryName}/materials/${encodedDescription}`,
+      `${import.meta.env.VITE_LOCAL_URL}/api/templates/${templateId}/categories/${categoryName}/materials/${encodedDescription}`,
       { headers: { Authorization: `Bearer ${user.token}` } }
     );
 
@@ -208,7 +208,7 @@ const handleRemoveMaterial = async (categoryName, description) => {
   // Fetch materials
   const fetchMaterials = async () => {
     try {
-      const response = await axios.get(`http://localhost:4000/api/materials`, {
+      const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/materials`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setMaterials(response.data);
@@ -260,7 +260,7 @@ const handleRemoveMaterial = async (categoryName, description) => {
     }
     try {
       const response = await axios.post(
-        `http://localhost:4000/api/templates`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/templates`,
         newTemplate,
         {
           headers: { Authorization: `Bearer ${user.token}` },
@@ -283,7 +283,7 @@ const handleRemoveMaterial = async (categoryName, description) => {
     
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/templates/${editTemplateId}`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/templates/${editTemplateId}`,
         newTemplate,
         {
           headers: { Authorization: `Bearer ${user.token}` },
@@ -306,7 +306,7 @@ const handleRemoveMaterial = async (categoryName, description) => {
   // Handle deleting a template
   const handleDeleteTemplate = async () => {
     try {
-      await axios.delete(`http://localhost:4000/api/templates/${selectedTemplate._id}`, {
+      await axios.delete(`${import.meta.env.VITE_LOCAL_URL}/api/templates/${selectedTemplate._id}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
 
@@ -433,7 +433,7 @@ const handleRemoveMaterial = async (categoryName, description) => {
       };
   
       const response = await axios.post(
-        `http://localhost:4000/api/templates/${templateId}/categories/${categoryName}/materials`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/templates/${templateId}/categories/${categoryName}/materials`,
         data,
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

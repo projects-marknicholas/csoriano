@@ -30,6 +30,6 @@ router.patch('/change-password', authMiddleware, changePassword);
 router.get('/is-default-password', authMiddleware, isDefaultPassword);
 
 // forgot password route (public, no auth required)
-router.patch('/forgot-password/:Username', forgotPassword);
+router.post('/forgot', forgotPassword);
 
 module.exports = router;

@@ -80,6 +80,7 @@ const projectSchema = new mongoose.Schema(
     avgFloorHeight: { type: Number, required: true },
     roomCount: { type: Number, default: 1 },
     foundationDepth: { type: Number, default: 1 },
+    projectImage: { type: String },
     status: {
       type: String,
       enum: ["not started", "ongoing", "postponed", "finished"],

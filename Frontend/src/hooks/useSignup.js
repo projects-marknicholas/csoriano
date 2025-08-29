@@ -5,17 +5,18 @@ export const useSignup = () => {
   const [isLoading, setIsLoading] = useState(null);
   const [error, setError] = useState(null);
 
-  const signup = async (Username, password, role) => {
+  const signup = async (password, Firstname, Lastname, Address) => {
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await axios.post(
-        `http://localhost:4000/api/user/signup`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/user/signup`,
         {
-          Username,
           password,
-          role,
+          Firstname,
+          Lastname,
+          Address
         }
       );
 

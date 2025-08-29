@@ -39,7 +39,7 @@ const Location = () => {
     const fetchLocations = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`http://localhost:4000/api/locations`, {
+        const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/locations`, {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
@@ -63,7 +63,7 @@ const Location = () => {
   const handleSave = async (id) => {
     try {
       const updatedLocation = { ...editedLocation };
-      await axios.patch(`http://localhost:4000/api/locations/${id}`, updatedLocation, {
+      await axios.patch(`${import.meta.env.VITE_LOCAL_URL}/api/locations/${id}`, updatedLocation, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },
@@ -81,7 +81,7 @@ const Location = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:4000/api/locations/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_LOCAL_URL}/api/locations/${id}`, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },
@@ -113,7 +113,7 @@ const Location = () => {
         return;
       }
 
-      const response = await axios.post(`http://localhost:4000/api/locations`, newLocation, {
+      const response = await axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/locations`, newLocation, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },

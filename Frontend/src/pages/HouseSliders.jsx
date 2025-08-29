@@ -16,7 +16,7 @@ const HouseSliders = () => {
   useEffect(() => {
     const fetchPreprojects = async () => {
       try {
-        const response = await axios.get("http://localhost:4000/api/preprojects", {
+        const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/preprojects`, {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },

@@ -14,7 +14,7 @@ export const useLogin = () => {
     setError(null);
 
     try {
-      const response = await axios.post(`http://localhost:4000/api/user/login`, { Username, password });
+      const response = await axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/user/login`, { Username, password });
       const json = response.data;
 
       // Log the user data after logging in

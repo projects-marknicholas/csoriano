@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import sorianoLogo from "../assets/sorianoLogo.jpg";
 import AlertModal from "../components/AlertModal";
+import { uploadToCloudinary } from "../hooks/useCloudinary";
 import {
   Box,
   Button,
@@ -121,6 +122,8 @@ const ProjectList = () => {
   const [localImages, setLocalImages] = useState({}); // To store images by floor and task
   const [showImageDeleteModal, setShowImageDeleteModal] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
+  const [projectImage, setProjectImage] = useState(null);
+  const [projectImagePreview, setProjectImagePreview] = useState(null);
 
   const toggleDetails = (section) => {
     setExpandedSections((prev) => ({
@@ -174,6 +177,25 @@ const ProjectList = () => {
     });
   };
 
+  const handleProjectImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setProjectImage(file);
+    
+    // Create a preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProjectImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveProjectImage = () => {
+    setProjectImage(null);
+    setProjectImagePreview(null);
+  };
+
   // Fetch all projects, locations, and templates
   useEffect(() => {
     if (!user || !user.token) return;
@@ -187,21 +209,40 @@ const ProjectList = () => {
           templatesResponse,
           usersResponse,
         ] = await Promise.all([
-          axios.get(`http://localhost:4000/api/project/contractor`, {
+          axios.get(`h${import.meta.env.VITE_LOCAL_URL}/api/project/contractor`, {
             headers: { Authorization: `Bearer ${user.token}` },
           }),
-          axios.get(`http://localhost:4000/api/locations`, {
+          axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/locations`, {
             headers: { Authorization: `Bearer ${user.token}` },
           }),
-          axios.get(`http://localhost:4000/api/templates`, {
+          axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/templates`, {
             headers: { Authorization: `Bearer ${user.token}` },
           }),
-          axios.get(`http://localhost:4000/api/user/get`, {
+          axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/user/get`, {
             headers: { Authorization: `Bearer ${user.token}` },
           }),
         ]);
 
-        setProjects(projectsResponse.data);
+        // Handle different possible response structures for projects
+        let projectsData = projectsResponse.data;
+        
+        // Check if the response has a data property (common pattern)
+        if (projectsResponse.data && projectsResponse.data.data) {
+          projectsData = projectsResponse.data.data;
+        }
+        
+        // Check if the response has a projects property
+        if (projectsResponse.data && projectsResponse.data.projects) {
+          projectsData = projectsResponse.data.projects;
+        }
+        
+        // Ensure projectsData is an array
+        if (!Array.isArray(projectsData)) {
+          console.error("Projects data is not an array:", projectsData);
+          projectsData = [];
+        }
+
+        setProjects(projectsData);
         setLocations(locationsResponse.data);
         setUsers(usersResponse.data);
 
@@ -216,7 +257,9 @@ const ProjectList = () => {
         );
         setTemplates(sortedTemplates);
 
-        // Debugging Logs
+        // Debugging Logs - check the actual structure
+        console.log("Fetched Projects:", projectsData);
+        console.log("Projects Response Structure:", projectsResponse.data);
         console.log("Fetched Templates:", sortedTemplates);
         console.log("Fetched Locations:", locationsResponse.data);
       } catch (error) {
@@ -233,6 +276,12 @@ const ProjectList = () => {
 
     fetchData();
   }, [user]);
+
+  useEffect(() => {
+    console.log("Projects state:", projects);
+    console.log("Filtered projects:", filterProjects());
+  }, [projects, searchTerm]);
+
   console.log(projects);
   const handleUpdateTaskImageRemark = (
     floorIndex,
@@ -409,7 +458,7 @@ const ProjectList = () => {
   const handleToggleProgressMode = async (projectId, isAutomatic) => {
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/progress-mode`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/progress-mode`,
         { isAutomatic },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -520,31 +569,48 @@ const ProjectList = () => {
         return;
       }
 
-      const defaultFloors = Array.from(
-        { length: newProject.numFloors },
-        (_, i) => ({
-          name: `FLOOR ${i + 1}`,
-          progress: 0,
-          tasks: [],
-        })
-      );
+      let projectImageUrl = '';
+      
+      // Upload project image to Cloudinary if available
+      if (projectImage) {
+        try {
+          projectImageUrl = await uploadToCloudinary(projectImage);
+        } catch (error) {
+          showAlert("Error", "Failed to upload project image. Please try again.", "error");
+          return;
+        }
+      }
 
-      const processedProject = {
-        ...newProject,
+      const projectData = {
+        name: newProject.name,
+        user: newProject.user,
+        template: newProject.template,
+        location: newProject.location,
+        totalArea: newProject.totalArea,
+        avgFloorHeight: newProject.avgFloorHeight,
+        roomCount: newProject.roomCount,
+        foundationDepth: newProject.foundationDepth,
+        numFloors: newProject.numFloors,
+        timeline: newProject.timeline,
         contractor: user.Username,
-        floors: defaultFloors,
+        projectImage: projectImageUrl, // Store the Cloudinary URL
       };
 
       const response = await axios.post(
-        `http://localhost:4000/api/project`,
-        processedProject,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project`,
+        projectData,
         {
-          headers: { Authorization: `Bearer ${user.token}` },
+          headers: { 
+            Authorization: `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          },
         }
       );
 
       setProjects([...projects, response.data.data]);
       resetProjectForm();
+      setProjectImage(null);
+      setProjectImagePreview(null);
       setIsModalOpen(false);
       showAlert("Success", "Project created successfully!", "success");
     } catch (error) {
@@ -571,33 +637,55 @@ const ProjectList = () => {
   const handleUpdateProject = async () => {
     try {
       const projectId = newProject._id;
+      let projectImageUrl = newProject.projectImage; // Keep existing image by default
+      
+      // Upload new project image to Cloudinary if available
+      if (projectImage) {
+        try {
+          projectImageUrl = await uploadToCloudinary(projectImage);
+        } catch (error) {
+          showAlert("Error", "Failed to upload project image. Please try again.", "error");
+          return;
+        }
+      }
+
+      const projectData = {
+        name: newProject.name,
+        user: newProject.user,
+        template: newProject.template,
+        location: newProject.location,
+        totalArea: newProject.totalArea,
+        avgFloorHeight: newProject.avgFloorHeight,
+        roomCount: newProject.roomCount,
+        foundationDepth: newProject.foundationDepth,
+        timeline: newProject.timeline,
+        projectImage: projectImageUrl, // Store the Cloudinary URL
+      };
+
+      // Handle floors and tasks (existing code)
       const updatedFloors = await Promise.all(
         newProject.floors.map(async (floor, floorIndex) => {
           const floorId = floor._id;
           let uploadedFloorImages = [];
 
-          // Upload new floor images
+          // Upload new floor images to Cloudinary
           if (localImages[floorIndex]?.images?.length) {
             uploadedFloorImages = await Promise.all(
               localImages[floorIndex].images.map(async (img) => {
-                const formData = new FormData();
-                formData.append("image", img.file);
-                formData.append("remark", img.remark || "");
-
-                const response = await axios.post(
-                  `http://localhost:4000/api/project/${projectId}/floors/${floorId}/images`,
-                  formData,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${user.token}`,
-                      "Content-Type": "multipart/form-data",
-                    },
-                  }
-                );
-
-                return response.data.image; // Use the image data returned from the server
+                try {
+                  const imageUrl = await uploadToCloudinary(img.file);
+                  return {
+                    path: imageUrl,
+                    remark: img.remark || "",
+                  };
+                } catch (error) {
+                  console.error("Error uploading floor image:", error);
+                  return null;
+                }
               })
             );
+            // Filter out any failed uploads
+            uploadedFloorImages = uploadedFloorImages.filter(img => img !== null);
           }
 
           // Handle tasks
@@ -606,30 +694,26 @@ const ProjectList = () => {
               const taskId = task._id;
               let uploadedTaskImages = [];
 
-              // Upload new task images
+              // Upload new task images to Cloudinary
               if (localImages[floorIndex]?.tasks?.[taskIndex]?.images?.length) {
                 uploadedTaskImages = await Promise.all(
                   localImages[floorIndex].tasks[taskIndex].images.map(
                     async (img) => {
-                      const formData = new FormData();
-                      formData.append("image", img.file);
-                      formData.append("remark", img.remark || "");
-
-                      const response = await axios.post(
-                        `http://localhost:4000/api/project/${projectId}/floors/${floorId}/tasks/${taskId}/images`,
-                        formData,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${user.token}`,
-                            "Content-Type": "multipart/form-data",
-                          },
-                        }
-                      );
-
-                      return response.data.image; // Assuming the API returns the uploaded image data
+                      try {
+                        const imageUrl = await uploadToCloudinary(img.file);
+                        return {
+                          path: imageUrl,
+                          remark: img.remark || "",
+                        };
+                      } catch (error) {
+                        console.error("Error uploading task image:", error);
+                        return null;
+                      }
                     }
                   )
                 );
+                // Filter out any failed uploads
+                uploadedTaskImages = uploadedTaskImages.filter(img => img !== null);
               }
 
               // Merge existing and new images
@@ -659,30 +743,17 @@ const ProjectList = () => {
         })
       );
 
-      const processedProject = {
-        ...newProject,
-        floors: updatedFloors,
-      };
+      // Add floors to the project data
+      projectData.floors = updatedFloors;
 
-      // Remove __v field to prevent versioning errors
-      delete processedProject.__v;
-
-      // Also, remove __v from nested subdocuments (floors and tasks)
-      processedProject.floors = processedProject.floors.map((floor) => {
-        delete floor.__v;
-        floor.tasks = floor.tasks.map((task) => {
-          delete task.__v;
-          return task;
-        });
-        return floor;
-      });
-
-      // Send the updated project to the server
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${editProjectId}`,
-        processedProject,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${editProjectId}`,
+        projectData,
         {
-          headers: { Authorization: `Bearer ${user.token}` },
+          headers: { 
+            Authorization: `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          },
         }
       );
 
@@ -695,6 +766,10 @@ const ProjectList = () => {
 
       // Reset local images
       setLocalImages({});
+      
+      // Reset image states
+      setProjectImage(null);
+      setProjectImagePreview(null);
 
       // Reset form and close modal
       resetProjectForm();
@@ -715,7 +790,7 @@ const ProjectList = () => {
   const handleDeleteProject = async () => {
     try {
       await axios.delete(
-        `http://localhost:4000/api/project/${selectedProject._id}`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${selectedProject._id}`,
         {
           headers: { Authorization: `Bearer ${user.token}` },
         }
@@ -756,6 +831,8 @@ const ProjectList = () => {
       roomCount: "",
       foundationDepth: "",
     });
+    setProjectImage(null);
+    setProjectImagePreview(null);
     // Reset validation errors
     setHeightError("");
     setFloorError("");
@@ -766,7 +843,7 @@ const ProjectList = () => {
   const handleStartProject = async (projectId) => {
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/start`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/start`,
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -788,7 +865,7 @@ const ProjectList = () => {
   const handlePostponeProject = async (projectId) => {
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/postpone`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/postpone`,
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -815,7 +892,7 @@ const ProjectList = () => {
   const handleResumeProject = async (projectId) => {
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/resume`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/resume`,
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -841,7 +918,7 @@ const ProjectList = () => {
   const handleEndProject = async (projectId) => {
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/end`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/end`,
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -897,7 +974,7 @@ const ProjectList = () => {
 
         // Send delete request to the server
         await axios.delete(
-          `http://localhost:4000/api/project/${projectId}/floors/${floorId}/images/${imageId}`,
+          `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/floors/${floorId}/images/${imageId}`,
           { headers: { Authorization: `Bearer ${user.token}` } }
         );
 
@@ -924,7 +1001,7 @@ const ProjectList = () => {
 
         // Send delete request to the server
         await axios.delete(
-          `http://localhost:4000/api/project/${projectId}/floors/${floorId}/tasks/${taskId}/images/${imageId}`,
+          `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/floors/${floorId}/tasks/${taskId}/images/${imageId}`,
           { headers: { Authorization: `Bearer ${user.token}` } }
         );
 
@@ -967,15 +1044,14 @@ const ProjectList = () => {
     const floorsWithProgress = project.floors.map((floor) => ({
       ...floor,
       progress: floor.progress || 0,
-      images: (floor.images || []).filter(Boolean), // Filter out nulls
+      images: (floor.images || []).filter(Boolean),
       tasks: floor.tasks.map((task) => ({
         ...task,
         progress: task.progress || 0,
-        images: (task.images || []).filter(Boolean), // Filter out nulls
+        images: (task.images || []).filter(Boolean),
       })),
     }));
 
-    // Check if project.template is a valid ObjectId
     const isValidTemplateId = /^[0-9a-fA-F]{24}$/.test(project.template);
 
     setNewProject({
@@ -987,6 +1063,11 @@ const ProjectList = () => {
       template: isValidTemplateId ? project.template : "",
     });
 
+    // Set project image preview if it exists
+    if (project.projectImage) {
+      setProjectImagePreview(project.projectImage);
+    }
+
     setIsModalOpen(true);
   };
 
@@ -994,7 +1075,7 @@ const ProjectList = () => {
   const handleUpdateStatus = async (projectId, newStatus) => {
     try {
       const response = await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/status`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/status`,
         { status: newStatus },
         {
           headers: { Authorization: `Bearer ${user.token}` },
@@ -1311,7 +1392,7 @@ const ProjectList = () => {
       const floorId = newProject.floors[floorIndex]._id;
 
       await axios.patch(
-        `http://localhost:4000/api/project/${projectId}/floors/${floorId}/images/${imageId}`,
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${projectId}/floors/${floorId}/images/${imageId}`,
         { remark: newRemark },
         {
           headers: { Authorization: `Bearer ${user.token}` },
@@ -1406,6 +1487,7 @@ const ProjectList = () => {
     if (!searchTerm) return projects;
     return projects.filter(
       (project) =>
+        project &&
         project.name &&
         project.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -1428,9 +1510,26 @@ const ProjectList = () => {
       <ThemeProvider theme={theme}>
         <Navbar />
         <Box p={3}>
+
           <Typography variant="h4" gutterBottom>
             Projects
           </Typography>
+
+          {selectedProject && selectedProject.projectImage && (
+            <Box mt={2}>
+              <Typography variant="subtitle2">Project Image:</Typography>
+              <img
+                src={selectedProject.projectImage}
+                alt="Project"
+                style={{
+                  width: "100%",
+                  maxHeight: "300px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                }}
+              />
+            </Box>
+          )}
 
           {isLoading ? (
             <Box
@@ -1478,6 +1577,7 @@ const ProjectList = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
+                      <TableCell>Project Image</TableCell>
                       <TableCell>Project Name</TableCell>
                       <TableCell>Project Owner</TableCell>
                       <TableCell>Project Contractor</TableCell>
@@ -1490,6 +1590,25 @@ const ProjectList = () => {
                   <TableBody>
                     {filteredProjects.map((project) => (
                       <TableRow key={project._id} hover>
+                        <TableCell
+                          onClick={() => handleViewProjectDetails(project)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          {project.projectImage ? (
+                            <img 
+                              src={project.projectImage} 
+                              alt="Project" 
+                              style={{ 
+                                width: "50px", 
+                                height: "50px", 
+                                objectFit: "cover",
+                                borderRadius: "4px"
+                              }} 
+                            />
+                          ) : (
+                            "N/A"
+                          )}
+                        </TableCell>
                         <TableCell
                           onClick={() => handleViewProjectDetails(project)}
                           style={{ cursor: "pointer" }}
@@ -1642,7 +1761,48 @@ const ProjectList = () => {
                 <CloseIcon />
               </IconButton>
             </DialogTitle>
+
             <DialogContent dividers>
+              <Typography variant="subtitle1" gutterBottom>
+                Project Image
+              </Typography>
+              
+              {projectImagePreview ? (
+                <Box position="relative" display="inline-block">
+                  <img
+                    src={projectImagePreview}
+                    alt="Project Preview"
+                    style={{
+                      width: "200px",
+                      height: "150px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={handleRemoveProjectImage}
+                    style={{
+                      position: "absolute",
+                      top: 5,
+                      right: 5,
+                      backgroundColor: "rgba(255, 255, 255, 0.8)",
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ) : (
+                <Button variant="contained" component="label">
+                  Upload Project Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleProjectImageUpload}
+                  />
+                </Button>
+              )}
               {/* Project Name */}
               <TextField
                 fullWidth

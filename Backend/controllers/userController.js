@@ -60,35 +60,51 @@ const getUsers = async (req, res) => {
 
 // Signup user
 const signupUser = async (req, res) => {
-  const { Username, role, password } = req.body;
+  const { password, Firstname, Lastname, Address } = req.body;
 
-  if (!role) {
-    return res.status(400).json({ error: "Role is required" });
+  // Validate required fields
+  if (!Firstname || !Lastname || !Address || !password) {
+    return res.status(400).json({ error: "All fields are required" });
   }
 
   try {
-    // Check if the Username already exists
-    const existingUser = await User.findOne({ Username });
+    // Check if a user with the same firstname and lastname already exists
+    const existingUser = await User.findOne({ 
+      Firstname: Firstname.toLowerCase(), 
+      Lastname: Lastname.toLowerCase() 
+    });
+    
     if (existingUser) {
-      return res.status(400).json({ error: "Username already exists" });
+      return res.status(400).json({ error: "User with this name already exists" });
     }
 
-    // // Hash the default password
+    // Hash the password
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    // Create a new user with the default password
+    // Create a new user with the provided data
     const USER = await User.create({
-      Username,
       password: hashedPassword,
-      role,
+      role: "user",
+      Username: Firstname.toLowerCase() + Lastname.toLowerCase(),
+      Firstname: Firstname.toLowerCase(),
+      Lastname: Lastname.toLowerCase(),
+      Address
     });
 
     // Create a token
     const token = createToken(USER._id);
 
-    res
-      .status(201)
-      .json({ message: "User created successfully", Username, token });
+    res.status(201).json({ 
+      message: "User created successfully", 
+      user: {
+        _id: USER._id,
+        Firstname: USER.Firstname,
+        Lastname: USER.Lastname,
+        Address: USER.Address,
+        role: USER.role
+      }, 
+      token 
+    });
   } catch (error) {
     console.error("Server Error:", error);
     res.status(500).json({ error: "Server Error" });
@@ -196,11 +212,11 @@ const isDefaultPassword = async (req, res) => {
 
 // Forgot password handler
 const forgotPassword = async (req, res) => {
-  const { Username } = req.params;
+  const { username } = req.body; // Now getting username from request body
 
   try {
     // Check if the user exists
-    const userExists = await User.findOne({ Username });
+    const userExists = await User.findOne({ Username: username });
 
     if (!userExists) {
       return res.status(404).json({ error: "User not found" });
@@ -211,7 +227,7 @@ const forgotPassword = async (req, res) => {
 
     res
       .status(200)
-      .json({ message: `Password reset request noted for user: ${Username}` });
+      .json({ message: `Password reset request noted for user: ${username}` });
   } catch (error) {
     console.error("Error updating forgot password status:", error);
     res.status(500).json({ error: "Server Error" });

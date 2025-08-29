@@ -50,7 +50,7 @@ const Materials = () => {
     const fetchMaterials = async () => {
       setLoading(true); 
       try {
-        const response = await axios.get(`http://localhost:4000/api/materials`, {
+        const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/materials`, {
           headers: {
             Authorization: `Bearer ${user.token}`, 
           },
@@ -81,7 +81,7 @@ const Materials = () => {
         ...editedMaterial,
         cost: editedMaterial.cost === "" ? 0 : editedMaterial.cost // Convert empty cost to 0 before saving
       };
-      await axios.patch(`http://localhost:4000/api/materials/${id}`, updatedMaterial, {
+      await axios.patch(`${import.meta.env.VITE_LOCAL_URL}/api/materials/${id}`, updatedMaterial, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },
@@ -100,7 +100,7 @@ const Materials = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:4000/api/materials/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_LOCAL_URL}/api/materials/${id}`, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },
@@ -133,7 +133,7 @@ const Materials = () => {
         return;
       }
   
-      const response = await axios.post(`http://localhost:4000/api/materials`, newMaterial, {
+      const response = await axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/materials`, newMaterial, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },

@@ -12,7 +12,7 @@ import {
 import { useLogin } from "../hooks/useLogin";
 import axios from "axios";
 import Header from "../components/Header";
-import AlertModal from "../components/AlertModal"; // Import AlertModal
+import AlertModal from "../components/AlertModal";
 
 const Login = () => {
   const [Username, setUsername] = useState('');
@@ -24,7 +24,7 @@ const Login = () => {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
-  const [alertType, setAlertType] = useState("info"); // Default type
+  const [alertType, setAlertType] = useState("info");
 
   // Function to show alerts
   const showAlert = (title, message, type = "info") => {
@@ -47,21 +47,27 @@ const Login = () => {
   };
 
   const handleForgotPassword = async (e) => {
-  e.preventDefault();
-  if (!Username) {
-    showAlert("Validation Error", "Please enter your Username to reset the password.", "error");
-    return;
-  }
+    e.preventDefault();
+    if (!Username) {
+      showAlert("Validation Error", "Please enter your Username to reset the password.", "error");
+      return;
+    }
 
-  try {
-    await axios.post(`http://localhost:4000/api/user/forgot/${Username}`);
-    showAlert("Success", `Password reset request for "${Username}" has been sent.`, "success");
-  } catch (error) {
-    console.error("Error sending password reset request", error);
-    showAlert("Error", "Failed to send password reset request. Please try again.", "error");
-  }
-};
-
+    try {
+      // Use proper parameter encoding with axios
+      await axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/user/forgot`, { 
+        username: Username 
+      });
+      showAlert("Success", `Password reset request for "${Username}" has been sent.`, "success");
+    } catch (error) {
+      console.error("Error sending password reset request", error);
+      if (error.response?.status === 404) {
+        showAlert("Error", "User not found. Please check your username.", "error");
+      } else {
+        showAlert("Error", "Failed to send password reset request. Please try again.", "error");
+      }
+    }
+  };
 
   return (
     <>
