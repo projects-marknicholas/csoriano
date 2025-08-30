@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const chatRoutes = require('./routes/chatRoutes');
 const materialRoutes = require('./routes/materialsRoute');
 const locationRoutes = require('./routes/locationsRoute');
 const templatesRoutes = require('./routes/templatesRoute');
@@ -36,6 +37,7 @@ app.use(cors({
 app.use('/api/user', userRoutes);
 
 
+app.use('/api/chat', chatRoutes);
 app.use('/api/materials', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), materialRoutes);
 app.use('/api/locations', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), locationRoutes);
 app.use('/api/templates', authMiddleware, authorizeRoles(['designEngineer', 'admin']), templatesRoutes);
