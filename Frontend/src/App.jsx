@@ -38,7 +38,7 @@ function App() {
       "/Templates": "Templates",
       "/ProjectList": "Project List",
       "/Generator": "Generator",
-      "/HouseSliders": "House Sliders",
+      "/HouseSliders": "Project Archive",
       "/aboutus": "About Us",
       "/collection": "Collection",
       "/services": "Services",

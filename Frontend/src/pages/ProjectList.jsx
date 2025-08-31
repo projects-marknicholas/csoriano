@@ -1582,7 +1582,7 @@ const ProjectList = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProjects.map((project) => (
+                    {filteredProjects.filter((project) => project.status !== "finished").map((project) => (
                       <TableRow key={project._id} hover>
                         <TableCell
                           onClick={() => handleViewProjectDetails(project)}
