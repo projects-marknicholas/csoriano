@@ -96,8 +96,8 @@ const DesignEngineerDashboard = () => {
               <div className={styles.cardText}>PROJECT LISTS</div>
             </Link>
             <Link to="/HouseSliders" className={styles.dashboardCard}>
-              <img src={Picture} alt="House Sliders" className={styles.dashboardImage} />
-              <div className={styles.cardText}>HOUSE SLIDERS</div>
+              <img src={Picture} alt="PROJECT ARCHIVE" className={styles.dashboardImage} />
+              <div className={styles.cardText}>PROJECT ARCHIVE</div>
             </Link>
             <Link to="/Templates" className={styles.dashboardCard}>
               <img src={Picture} alt="Templates" className={styles.dashboardImage} />

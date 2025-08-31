@@ -209,7 +209,7 @@ const ProjectList = () => {
           templatesResponse,
           usersResponse,
         ] = await Promise.all([
-          axios.get(`h${import.meta.env.VITE_LOCAL_URL}/api/project/contractor`, {
+          axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/project/contractor`, {
             headers: { Authorization: `Bearer ${user.token}` },
           }),
           axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/locations`, {
@@ -581,6 +581,15 @@ const ProjectList = () => {
         }
       }
 
+      const defaultFloors = Array.from(
+        { length: newProject.numFloors },
+        (_, i) => ({
+          name: `FLOOR ${i + 1}`,
+          progress: 0,
+          tasks: [],
+        })
+      );
+
       const projectData = {
         name: newProject.name,
         user: newProject.user,
@@ -594,6 +603,7 @@ const ProjectList = () => {
         timeline: newProject.timeline,
         contractor: user.Username,
         projectImage: projectImageUrl, // Store the Cloudinary URL
+        floors: defaultFloors,
       };
 
       const response = await axios.post(
@@ -1515,22 +1525,6 @@ const ProjectList = () => {
             Projects
           </Typography>
 
-          {selectedProject && selectedProject.projectImage && (
-            <Box mt={2}>
-              <Typography variant="subtitle2">Project Image:</Typography>
-              <img
-                src={selectedProject.projectImage}
-                alt="Project"
-                style={{
-                  width: "100%",
-                  maxHeight: "300px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                }}
-              />
-            </Box>
-          )}
-
           {isLoading ? (
             <Box
               display="flex"
@@ -1699,6 +1693,7 @@ const ProjectList = () => {
                             <IconButton
                               onClick={() => handleEditProject(project)}
                               color="secondary"
+                              disabled={project.status === "finished"}
                             >
                               <EditIcon />
                             </IconButton>
@@ -1721,6 +1716,7 @@ const ProjectList = () => {
                                 )
                               }
                               sx={{ ml: 1 }}
+                              disabled={project.status === "finished"}
                             >
                               {project.isAutomaticProgress
                                 ? "Automatic"
@@ -1855,6 +1851,7 @@ const ProjectList = () => {
                     templates.map((template) => (
                       <MenuItem key={template._id} value={template._id}>
                         {template.title}
+                        {template.tier && ` (${template.tier})`}
                       </MenuItem>
                     ))
                   ) : (
@@ -2215,86 +2212,24 @@ const ProjectList = () => {
                         </Box>
 
                         <Box mt={2} mb={2}>
-                          <Typography variant="subtitle2">
-                            Existing Tasks Images
-                          </Typography>
-                          <Box display="flex" flexWrap="wrap" gap={2}>
-                            {(task.images || [])
-                              .filter(Boolean)
-                              .map((img, imageIndex) => (
-                                <Box
-                                  key={imageIndex}
-                                  position="relative"
-                                  display="flex"
-                                  flexDirection="column"
-                                  alignItems="center"
-                                >
-                                  {/* Image Display */}
-                                  <img
-                                    src={img.path}
-                                    alt={`Floor Image ${imageIndex + 1}`}
-                                    style={{
-                                      width: "150px",
-                                      height: "150px",
-                                      objectFit: "cover",
-                                      borderRadius: "8px",
-                                    }}
-                                  />
-
-                                  <TextField
-                                    fullWidth
-                                    margin="dense"
-                                    label="Remark"
-                                    value={img.remark || ""} // Display the current remark for task images
-                                    onChange={
-                                      (e) =>
-                                        handleUpdateTaskImageRemark(
-                                          floorIndex,
-                                          taskIndex,
-                                          imageIndex,
-                                          e.target.value
-                                        ) // Handle remark changes for task images
-                                    }
-                                    sx={{ mt: 1 }}
-                                  />
-
-                                  {/* Delete Button */}
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      handleDeleteExistingTaskImage(
-                                        floorIndex,
-                                        taskIndex,
-                                        imageIndex
-                                      )
-                                    }
-                                    style={{
-                                      position: "absolute",
-                                      top: 5,
-                                      right: 5,
-                                      backgroundColor:
-                                        "rgba(255, 255, 255, 0.8)",
-                                    }}
-                                  >
-                                    <CloseIcon fontSize="small" />
-                                  </IconButton>
-                                </Box>
-                              ))}
-                          </Box>
-                        </Box>
-
-                        {/* Task Images */}
-                        {localImages[floorIndex]?.tasks[taskIndex]?.images?.map(
-                          (img, imageIndex) => (
+                      <Typography variant="subtitle2">
+                        Existing Tasks Images
+                      </Typography>
+                      <Box display="flex" flexWrap="wrap" gap={2}>
+                        {(task.images || [])
+                          .filter(Boolean)
+                          .map((img, imageIndex) => (
                             <Box
                               key={imageIndex}
-                              mt={2}
                               position="relative"
-                              display="inline-block"
+                              display="flex"
+                              flexDirection="column"
+                              alignItems="center"
                             >
+                              {/* Image Display */}
                               <img
-                                src={img.preview}
-                                alt="Task Preview"
+                                src={img.path}
+                                alt={`Floor Image ${imageIndex + 1}`}
                                 style={{
                                   width: "150px",
                                   height: "150px",
@@ -2302,399 +2237,479 @@ const ProjectList = () => {
                                   borderRadius: "8px",
                                 }}
                               />
+
+                              <TextField
+                                fullWidth
+                                margin="dense"
+                                label="Remark"
+                                value={img.remark || ""} // Display the current remark for task images
+                                onChange={
+                                  (e) =>
+                                    handleUpdateTaskImageRemark(
+                                      floorIndex,
+                                      taskIndex,
+                                      imageIndex,
+                                      e.target.value
+                                    ) // Handle remark changes for task images
+                                }
+                                sx={{ mt: 1 }}
+                              />
+
+                              {/* Delete Button */}
                               <IconButton
                                 size="small"
                                 onClick={() =>
-                                  handleRemoveImage(
+                                  handleDeleteExistingTaskImage(
                                     floorIndex,
-                                    imageIndex,
-                                    taskIndex
+                                    taskIndex,
+                                    imageIndex
                                   )
                                 }
                                 style={{
                                   position: "absolute",
                                   top: 5,
                                   right: 5,
-                                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                                  backgroundColor:
+                                    "rgba(255, 255, 255, 0.8)",
                                 }}
                               >
                                 <CloseIcon fontSize="small" />
                               </IconButton>
                             </Box>
-                          )
-                        )}
-
-                        {isEditing && (
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            onClick={() => deleteTask(floorIndex, taskIndex)}
-                            sx={{ mt: 1 }}
-                          >
-                            Delete Task
-                          </Button>
-                        )}
+                          ))}
                       </Box>
-                    ))}
-                    {/* Add Task and Delete Floor Buttons */}
+                    </Box>
+
+                    {/* Task Images */}
+                    {localImages[floorIndex]?.tasks[taskIndex]?.images?.map(
+                      (img, imageIndex) => (
+                        <Box
+                          key={imageIndex}
+                          mt={2}
+                          position="relative"
+                          display="inline-block"
+                        >
+                          <img
+                            src={img.preview}
+                            alt="Task Preview"
+                            style={{
+                              width: "150px",
+                              height: "150px",
+                              objectFit: "cover",
+                              borderRadius: "8px",
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleRemoveImage(
+                                floorIndex,
+                                imageIndex,
+                                taskIndex
+                              )
+                            }
+                            style={{
+                              position: "absolute",
+                              top: 5,
+                              right: 5,
+                              backgroundColor: "rgba(255, 255, 255, 0.8)",
+                            }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      )
+                    )}
+
                     {isEditing && (
-                      <>
-                        <Button
-                          variant="contained"
-                          onClick={() => addTaskToFloor(floorIndex)}
-                          sx={{ mt: 1 }}
-                        >
-                          Add Task
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          onClick={() => deleteFloor(floorIndex)}
-                          sx={{ mt: 1, ml: 2 }}
-                        >
-                          Delete Floor
-                        </Button>
-                      </>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => deleteTask(floorIndex, taskIndex)}
+                        sx={{ mt: 1 }}
+                      >
+                        Delete Task
+                      </Button>
+                    )}
+                  </Box>
+                ))}
+                {/* Add Task and Delete Floor Buttons */}
+                {isEditing && (
+                  <>
+                    <Button
+                      variant="contained"
+                      onClick={() => addTaskToFloor(floorIndex)}
+                      sx={{ mt: 1 }}
+                    >
+                      Add Task
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => deleteFloor(floorIndex)}
+                      sx={{ mt: 1, ml: 2 }}
+                    >
+                      Delete Floor
+                    </Button>
+                  </>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          ))}
+
+          {isEditing && (
+            <Button variant="contained" onClick={addFloor} sx={{ mt: 2 }}>
+              Add Floor
+            </Button>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
+          <Button
+            onClick={isEditing ? handleUpdateProject : handleCreateProject}
+            variant="contained"
+            color="secondary"
+          >
+            {isEditing ? "Update Project" : "Create Project"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Project Details Modal */}
+      {showDetailsModal && selectedProject && (
+        <Dialog
+          open={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          fullWidth
+          maxWidth="md"
+        >
+          <DialogTitle>
+            Project Details - {selectedProject.name}
+            <IconButton
+              aria-label="close"
+              onClick={() => setShowDetailsModal(false)}
+              sx={{ position: "absolute", right: 8, top: 8 }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            {/* Project Image */}
+            {selectedProject.projectImage && (
+              <Box mb={2}>
+                <Typography variant="subtitle2">Project Image:</Typography>
+                <img
+                  src={selectedProject.projectImage}
+                  alt="Project"
+                  style={{
+                    width: "100%",
+                    maxHeight: "300px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                  }}
+                />
+              </Box>
+            )}
+
+            {/* Basic Information */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Basic Information</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography>
+                  <strong>Project Owner:</strong>{" "}
+                  {selectedProject.user || "N/A"}
+                </Typography>
+                <Typography>
+                  <strong>Project Contractor:</strong>{" "}
+                  {selectedProject.contractor || "N/A"}
+                </Typography>
+                <Typography>
+                  <strong>Template:</strong>{" "}
+                  {templates.find(
+                    (template) => template._id === selectedProject.template
+                  )?.title || "N/A"}
+                </Typography>
+                <Typography>
+                  <strong>Status:</strong>{" "}
+                  {selectedProject.status.charAt(0).toUpperCase() +
+                    selectedProject.status.slice(1)}
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Location */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Location</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography>
+                  <strong>Location Name:</strong>{" "}
+                  {selectedProject.location || "N/A"}
+                </Typography>
+                <Typography>
+                  <strong>Markup:</strong>{" "}
+                  {locations.find(
+                    (loc) => loc.name === selectedProject.location
+                  )?.markup || "N/A"}
+                  %
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Specifications */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Specifications</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography>
+                  <strong>Total Area:</strong> {selectedProject.totalArea}{" "}
+                  sqm
+                </Typography>
+                <Typography>
+                  <strong>Floor Height:</strong>{" "}
+                  {selectedProject.avgFloorHeight} meters
+                </Typography>
+                <Typography>
+                  <strong>Number of Rooms:</strong>{" "}
+                  {selectedProject.roomCount}
+                </Typography>
+                <Typography>
+                  <strong>Foundation Depth:</strong>{" "}
+                  {selectedProject.foundationDepth} meters
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Timeline */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Timeline</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography>
+                  <strong>Duration:</strong>{" "}
+                  {selectedProject.timeline.duration}{" "}
+                  {selectedProject.timeline.unit}
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Project Dates */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Project Dates</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography>
+                  <strong>Start Date:</strong>{" "}
+                  {selectedProject.startDate
+                    ? new Date(
+                        selectedProject.startDate
+                      ).toLocaleDateString()
+                    : "N/A"}
+                </Typography>
+                <Typography>
+                  <strong>End Date:</strong>{" "}
+                  {selectedProject.endDate
+                    ? new Date(selectedProject.endDate).toLocaleDateString()
+                    : "N/A"}
+                </Typography>
+                {/* Postponed Dates */}
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography>Postponed Dates</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {selectedProject.postponedDates.length > 0 ? (
+                      selectedProject.postponedDates.map((date, index) => (
+                        <Typography key={index}>
+                          {new Date(date).toLocaleDateString()}
+                        </Typography>
+                      ))
+                    ) : (
+                      <Typography>No postponed dates</Typography>
                     )}
                   </AccordionDetails>
                 </Accordion>
-              ))}
+                {/* Resumed Dates */}
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography>Resumed Dates</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {selectedProject.resumedDates.length > 0 ? (
+                      selectedProject.resumedDates.map((date, index) => (
+                        <Typography key={index}>
+                          {new Date(date).toLocaleDateString()}
+                        </Typography>
+                      ))
+                    ) : (
+                      <Typography>No resumed dates</Typography>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+              </AccordionDetails>
+            </Accordion>
 
-              {isEditing && (
-                <Button variant="contained" onClick={addFloor} sx={{ mt: 2 }}>
-                  Add Floor
-                </Button>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
-              <Button
-                onClick={isEditing ? handleUpdateProject : handleCreateProject}
-                variant="contained"
-                color="secondary"
-              >
-                {isEditing ? "Update Project" : "Create Project"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+            {/* Floors and Tasks */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Floors and Tasks</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {selectedProject.floors.map((floor, index) => (
+                  <Accordion key={index}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>
+                        {floor.name} - Progress: {floor.progress}%
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {floor.tasks.length > 0 ? (
+                        floor.tasks.map((task, taskIndex) => (
+                          <Box key={taskIndex} mb={2}>
+                            <Typography>
+                              <strong>Task Name:</strong> {task.name}
+                            </Typography>
+                            <Typography>
+                              <strong>Task Progress:</strong>{" "}
+                              {task.progress}%
+                            </Typography>
+                          </Box>
+                        ))
+                      ) : (
+                        <Typography>No tasks available</Typography>
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </AccordionDetails>
+            </Accordion>
 
-          {/* Project Details Modal */}
-          {showDetailsModal && selectedProject && (
-            <Dialog
-              open={showDetailsModal}
-              onClose={() => setShowDetailsModal(false)}
-              fullWidth
-              maxWidth="md"
-            >
-              <DialogTitle>
-                Project Details - {selectedProject.name}
-                <IconButton
-                  aria-label="close"
-                  onClick={() => setShowDetailsModal(false)}
-                  sx={{ position: "absolute", right: 8, top: 8 }}
+            {/* BOM Section */}
+            {selectedProject.bom &&
+            selectedProject.bom.categories.length > 0 ? (
+              <>
+                <Typography variant="h6" mt={2}>
+                  Bill of Materials (BOM)
+                </Typography>
+                <Typography>
+                  <strong>Total Project Cost:</strong> ₱
+                  {selectedProject.bom.markedUpCosts?.totalProjectCost?.toLocaleString(
+                    "en-PH",
+                    { minimumFractionDigits: 2 }
+                  )}
+                </Typography>
+                <Typography>
+                  <strong>Labor Cost:</strong> ₱
+                  {selectedProject.bom.markedUpCosts?.laborCost?.toLocaleString(
+                    "en-PH",
+                    { minimumFractionDigits: 2 }
+                  )}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => handleGenerateBOMPDF("client")}
+                  sx={{ mt: 2, mr: 2 }}
                 >
-                  <CloseIcon />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent dividers>
-                {/* Basic Information */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Basic Information</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography>
-                      <strong>Project Owner:</strong>{" "}
-                      {selectedProject.user || "N/A"}
-                    </Typography>
-                    <Typography>
-                      <strong>Project Contractor:</strong>{" "}
-                      {selectedProject.contractor || "N/A"}
-                    </Typography>
-                    <Typography>
-                      <strong>Template:</strong>{" "}
-                      {templates.find(
-                        (template) => template._id === selectedProject.template
-                      )?.title || "N/A"}
-                    </Typography>
-                    <Typography>
-                      <strong>Status:</strong>{" "}
-                      {selectedProject.status.charAt(0).toUpperCase() +
-                        selectedProject.status.slice(1)}
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Location */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Location</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography>
-                      <strong>Location Name:</strong>{" "}
-                      {selectedProject.location || "N/A"}
-                    </Typography>
-                    <Typography>
-                      <strong>Markup:</strong>{" "}
-                      {locations.find(
-                        (loc) => loc.name === selectedProject.location
-                      )?.markup || "N/A"}
-                      %
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Specifications */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Specifications</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography>
-                      <strong>Total Area:</strong> {selectedProject.totalArea}{" "}
-                      sqm
-                    </Typography>
-                    <Typography>
-                      <strong>Floor Height:</strong>{" "}
-                      {selectedProject.avgFloorHeight} meters
-                    </Typography>
-                    <Typography>
-                      <strong>Number of Rooms:</strong>{" "}
-                      {selectedProject.roomCount}
-                    </Typography>
-                    <Typography>
-                      <strong>Foundation Depth:</strong>{" "}
-                      {selectedProject.foundationDepth} meters
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Timeline */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Timeline</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography>
-                      <strong>Duration:</strong>{" "}
-                      {selectedProject.timeline.duration}{" "}
-                      {selectedProject.timeline.unit}
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Project Dates */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Project Dates</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography>
-                      <strong>Start Date:</strong>{" "}
-                      {selectedProject.startDate
-                        ? new Date(
-                            selectedProject.startDate
-                          ).toLocaleDateString()
-                        : "N/A"}
-                    </Typography>
-                    <Typography>
-                      <strong>End Date:</strong>{" "}
-                      {selectedProject.endDate
-                        ? new Date(selectedProject.endDate).toLocaleDateString()
-                        : "N/A"}
-                    </Typography>
-                    {/* Postponed Dates */}
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography>Postponed Dates</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        {selectedProject.postponedDates.length > 0 ? (
-                          selectedProject.postponedDates.map((date, index) => (
-                            <Typography key={index}>
-                              {new Date(date).toLocaleDateString()}
-                            </Typography>
-                          ))
-                        ) : (
-                          <Typography>No postponed dates</Typography>
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                    {/* Resumed Dates */}
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography>Resumed Dates</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        {selectedProject.resumedDates.length > 0 ? (
-                          selectedProject.resumedDates.map((date, index) => (
-                            <Typography key={index}>
-                              {new Date(date).toLocaleDateString()}
-                            </Typography>
-                          ))
-                        ) : (
-                          <Typography>No resumed dates</Typography>
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Floors and Tasks */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Floors and Tasks</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {selectedProject.floors.map((floor, index) => (
-                      <Accordion key={index}>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography>
-                            {floor.name} - Progress: {floor.progress}%
-                          </Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          {floor.tasks.length > 0 ? (
-                            floor.tasks.map((task, taskIndex) => (
-                              <Box key={taskIndex} mb={2}>
-                                <Typography>
-                                  <strong>Task Name:</strong> {task.name}
-                                </Typography>
-                                <Typography>
-                                  <strong>Task Progress:</strong>{" "}
-                                  {task.progress}%
-                                </Typography>
-                              </Box>
-                            ))
-                          ) : (
-                            <Typography>No tasks available</Typography>
-                          )}
-                        </AccordionDetails>
-                      </Accordion>
-                    ))}
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* BOM Section */}
-                {selectedProject.bom &&
-                selectedProject.bom.categories.length > 0 ? (
-                  <>
-                    <Typography variant="h6" mt={2}>
-                      Bill of Materials (BOM)
-                    </Typography>
-                    <Typography>
-                      <strong>Total Project Cost:</strong> ₱
-                      {selectedProject.bom.markedUpCosts?.totalProjectCost?.toLocaleString(
-                        "en-PH",
-                        { minimumFractionDigits: 2 }
-                      )}
-                    </Typography>
-                    <Typography>
-                      <strong>Labor Cost:</strong> ₱
-                      {selectedProject.bom.markedUpCosts?.laborCost?.toLocaleString(
-                        "en-PH",
-                        { minimumFractionDigits: 2 }
-                      )}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() => handleGenerateBOMPDF("client")}
-                      sx={{ mt: 2, mr: 2 }}
-                    >
-                      Download BOM for Client
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() => handleGenerateBOMPDF("contractor")}
-                      sx={{ mt: 2 }}
-                    >
-                      Download BOM for Contractor
-                    </Button>
-                  </>
-                ) : (
-                  <Typography mt={2}>
-                    <strong>BOM data is not available for this project.</strong>
-                  </Typography>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setShowDetailsModal(false)}>
-                  Close
+                  Download BOM for Client
                 </Button>
-              </DialogActions>
-            </Dialog>
-          )}
-
-          {/* Confirm Delete Image Dialog */}
-          <Dialog
-            open={showImageDeleteModal}
-            onClose={handleCancelDeleteImage}
-            aria-labelledby="confirm-delete-image-title"
-          >
-            <DialogTitle id="confirm-delete-image-title">
-              Confirm Delete
-            </DialogTitle>
-            <DialogContent>
-              <Typography>
-                Are you sure you want to delete this image?
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => handleGenerateBOMPDF("contractor")}
+                  sx={{ mt: 2 }}
+                >
+                  Download BOM for Contractor
+                </Button>
+              </>
+            ) : (
+              <Typography mt={2}>
+                <strong>BOM data is not available for this project.</strong>
               </Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCancelDeleteImage}>Cancel</Button>
-              <Button
-                onClick={handleConfirmDeleteImage}
-                color="secondary"
-                variant="contained"
-              >
-                Delete
-              </Button>
-            </DialogActions>
-          </Dialog>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowDetailsModal(false)}>
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
-          {/* Confirm Delete Dialog */}
-          <Dialog
-            open={showDeleteModal}
-            onClose={handleCancelDelete}
-            aria-labelledby="alert-dialog-title"
-            aria-describedby="alert-dialog-description"
+      {/* Confirm Delete Image Dialog */}
+      <Dialog
+        open={showImageDeleteModal}
+        onClose={handleCancelDeleteImage}
+        aria-labelledby="confirm-delete-image-title"
+      >
+        <DialogTitle id="confirm-delete-image-title">
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this image?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDeleteImage}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDeleteImage}
+            color="secondary"
+            variant="contained"
           >
-            <DialogTitle id="alert-dialog-title">
-              {"Confirm Delete"}
-            </DialogTitle>
-            <DialogContent>
-              <Typography id="alert-dialog-description">
-                Are you sure you want to delete the project "
-                {selectedProject?.name}"?
-              </Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCancelDelete}>Cancel</Button>
-              <Button
-                onClick={handleConfirmDelete}
-                color="secondary"
-                variant="contained"
-                autoFocus
-              >
-                Delete
-              </Button>
-            </DialogActions>
-          </Dialog>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          {/* Alert Modal */}
-          <AlertModal
-            isOpen={isAlertOpen}
-            onClose={() => setIsAlertOpen(false)}
-            title={alertTitle}
-            message={alertMessage}
-            type={alertType}
-          />
-        </Box>
-      </ThemeProvider>
-    </>
-  );
+      {/* Confirm Delete Dialog */}
+      <Dialog
+        open={showDeleteModal}
+        onClose={handleCancelDelete}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          {"Confirm Delete"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography id="alert-dialog-description">
+            Are you sure you want to delete the project "
+            {selectedProject?.name}"?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="secondary"
+            variant="contained"
+            autoFocus
+            disabled={selectedProject?.status === "finished"}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={isAlertOpen}
+        onClose={() => setIsAlertOpen(false)}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+      />
+    </Box>
+  </ThemeProvider>
+</>
+);
 };
 
 export default ProjectList;
