@@ -20,6 +20,7 @@ const UserDashboard = () => {
   const [isPasswordChanged, setIsPasswordChanged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const containerRef = useRef(null);
+  const [chatProjectId, setChatProjectId] = useState(null);
 
   // Function to show alerts
   const showAlert = (title, message, type = "info") => {
@@ -98,6 +99,10 @@ const UserDashboard = () => {
     }
   };
 
+  const handleChat = async (projectId) => {
+    setChatProjectId(projectId);
+  };
+
   return (
     <>
       <Navbar />
@@ -120,15 +125,16 @@ const UserDashboard = () => {
       <div className={styles.cardContainer} ref={containerRef}>
         {projects.length > 0 ? (
           projects.map(project => (
-            <Link to={`/project/${project._id}`} key={project._id} className={styles.card}>
+            <div key={project._id} className={styles.card}>
               <img src={image} alt={project.name} />
               <div className={styles.cardContent}>
                 <h1>{project.name}</h1>
                 <div className={styles.projectInfo}>
-                  <p>{project.status}</p>
+                  <Link to={`/project/${project._id}`}>{project.status}</Link>
+                  <button onClick={() => handleChat(project._id)} className={styles.projectInfo}>Chat</button>
                 </div>
               </div>
-            </Link>
+            </div>
           ))
         ) : (
           <p>No projects available for this user.</p>
@@ -137,7 +143,7 @@ const UserDashboard = () => {
 
       {/* Only display ChatComponent if password is changed */}
       {isPasswordChanged && (
-        <ChatComponent projectId={projects[0]?._id} user="User" />
+        <ChatComponent projectId={chatProjectId} user="User" />
       )}
 
       {/* Alert Modal */}

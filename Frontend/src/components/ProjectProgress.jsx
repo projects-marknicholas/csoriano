@@ -13,6 +13,13 @@ import {
   Dialog,
   DialogContent,
   IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -29,7 +36,8 @@ const ProjectProgress = () => {
   const [selectedFloor, setSelectedFloor] = useState(null);
   const { user } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null)
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [bomDetailsOpen, setBomDetailsOpen] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -42,6 +50,7 @@ const ProjectProgress = () => {
 
         const fetchedProject = response.data.project || response.data;
         setProject(fetchedProject);
+        console.log("Progress", response.data);
       } catch (error) {
         console.error('Error fetching project:', error);
       } finally {
@@ -64,6 +73,10 @@ const ProjectProgress = () => {
 
   const handleCloseModal = () => {
     setSelectedImage(null); // Close modal
+  };
+
+  const toggleBomDetails = () => {
+    setBomDetailsOpen(!bomDetailsOpen);
   };
 
   // Function to generate and download the BOM PDF
@@ -98,28 +111,76 @@ const ProjectProgress = () => {
     yPosition += 10;
     doc.text(`Floor Height: ${bom.projectDetails.avgFloorHeight || 'N/A'} meters`, 10, yPosition);
     yPosition += 10;
+    doc.text(`Room Count: ${bom.projectDetails.roomCount || 'N/A'}`, 10, yPosition);
+    yPosition += 10;
+    doc.text(`Foundation Depth: ${bom.projectDetails.foundationDepth || 'N/A'} meters`, 10, yPosition);
+    yPosition += 10;
+    doc.text(`Location: ${bom.projectDetails.location?.name || 'N/A'} (${bom.projectDetails.location?.markup || 0}% markup)`, 10, yPosition);
+    yPosition += 15;
 
+    // BOM Costs
+    doc.setFontSize(14);
+    doc.text('Cost Summary:', 10, yPosition);
+    yPosition += 10;
+    doc.setFontSize(12);
+    doc.text(`Original Labor Cost: PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(
+      bom.originalCosts.laborCost || 0
+    )}`, 10, yPosition);
+    yPosition += 10;
+    doc.text(`Original Total Project Cost: PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(
+      bom.originalCosts.totalProjectCost || 0
+    )}`, 10, yPosition);
+    yPosition += 10;
+    doc.text(`Marked Up Labor Cost: PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(
+      bom.markedUpCosts.laborCost || 0
+    )}`, 10, yPosition);
+    yPosition += 10;
+    
     // BOM Grand Total
     const grandTotal = `PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(
       bom.markedUpCosts.totalProjectCost || 0
     )}`;
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.text(`Grand Total: ${grandTotal}`, 10, yPosition);
-    yPosition += 15;
+    yPosition += 20;
 
     // BOM Categories
-    doc.autoTable({
-      head: [['#', 'Category', 'Total Amount (PHP)']],
-      body: bom.categories.map((category, index) => [
-        index + 1,
-        category.category.toUpperCase(),
-        `PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(
-          category.materials.reduce((sum, material) => sum + material.totalAmount, 0)
-        )}`,
-      ]),
-      startY: yPosition,
-      headStyles: { fillColor: [41, 128, 185] },
-      bodyStyles: { textColor: [44, 62, 80] },
+    doc.setFontSize(14);
+    doc.text('BOM Categories:', 10, yPosition);
+    yPosition += 10;
+
+    bom.categories.forEach((category, index) => {
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(41, 128, 185);
+      doc.text(`${index + 1}. ${category.category.toUpperCase()} - PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(
+        category.categoryTotal || 0
+      )}`, 10, yPosition);
+      yPosition += 8;
+
+      // Add materials table for this category
+      doc.autoTable({
+        head: [['Item', 'Description', 'Quantity', 'Unit', 'Cost', 'Total Amount']],
+        body: category.materials.map(material => [
+          material.item,
+          material.description,
+          material.quantity,
+          material.unit,
+          `PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(material.cost)}`,
+          `PHP ${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(material.totalAmount)}`,
+        ]),
+        startY: yPosition,
+        headStyles: { fillColor: [41, 128, 185] },
+        bodyStyles: { textColor: [44, 62, 80] },
+        theme: 'grid',
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 15;
     });
 
     // Save the PDF
@@ -151,6 +212,12 @@ const ProjectProgress = () => {
     day: 'numeric',
   });
 
+  const endDate = project.endDate ? new Date(project.endDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }) : 'Not yet completed';
+
   return (
     <div className={styles.container}>
       <Navbar />
@@ -161,21 +228,143 @@ const ProjectProgress = () => {
         <Typography className={styles.dateTitle} variant="body1" gutterBottom>
           Started on: {startDate}
         </Typography>
+        {project.endDate && (
+          <Typography className={styles.dateTitle} variant="body1" gutterBottom>
+            Completed on: {endDate}
+          </Typography>
+        )}
         <Typography variant="body1" gutterBottom className={styles.progressTitle}>
           STATUS: {project.status ? project.status.toUpperCase() : 'UNKNOWN'}
         </Typography>
 
-        {/* Download BOM Button */}
-        {project.bom && (
-          <Box mt={2}>
-            <Button variant="contained" color="secondary" onClick={handleDownloadBOM}>
-              Download your BOM
-            </Button>
+        {/* Project Details */}
+        <Box mt={3} p={2} sx={{ border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+          <Typography variant="h6" gutterBottom>
+            Project Details
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={2}>
+            <Typography variant="body2">
+              <strong>Total Area:</strong> {project.totalArea} sqm
+            </Typography>
+            <Typography variant="body2">
+              <strong>Average Floor Height:</strong> {project.avgFloorHeight} meters
+            </Typography>
+            <Typography variant="body2">
+              <strong>Room Count:</strong> {project.roomCount}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Foundation Depth:</strong> {project.foundationDepth} meters
+            </Typography>
+            <Typography variant="body2">
+              <strong>Location:</strong> {project.location}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Contractor:</strong> {project.contractor}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Timeline */}
+        {project.timeline && (
+          <Box mt={2} p={2} sx={{ border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+            <Typography variant="h6" gutterBottom>
+              Project Timeline
+            </Typography>
+            <Typography variant="body2">
+              <strong>Duration:</strong> {project.timeline.duration} {project.timeline.unit}
+            </Typography>
           </Box>
         )}
 
-        <Box mt={8}>
-          {project.floors &&
+        {/* BOM Section */}
+        {project.bom && (
+          <Box mt={4}>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Button variant="contained" color="secondary" onClick={handleDownloadBOM}>
+                Download your BOM
+              </Button>
+              <Button variant="outlined" onClick={toggleBomDetails}>
+                {bomDetailsOpen ? 'Hide BOM Details' : 'Show BOM Details'}
+              </Button>
+            </Box>
+
+            {bomDetailsOpen && (
+              <Box mt={2}>
+                <Typography variant="h6" gutterBottom>
+                  Bill of Materials Summary
+                </Typography>
+                
+                {/* Cost Summary */}
+                <Box mb={3}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Cost Summary
+                  </Typography>
+                  <Box display="flex" flexWrap="wrap" gap={2}>
+                    <Typography variant="body2">
+                      <strong>Original Labor Cost:</strong> PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(project.bom.originalCosts.laborCost)}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Original Total Project Cost:</strong> PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(project.bom.originalCosts.totalProjectCost)}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Marked Up Labor Cost:</strong> PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(project.bom.markedUpCosts.laborCost)}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Marked Up Total Project Cost:</strong> PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(project.bom.markedUpCosts.totalProjectCost)}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Categories */}
+                {project.bom.categories.map((category, index) => (
+                  <Accordion key={index}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>
+                        {category.category} - PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(category.categoryTotal)}
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <TableContainer component={Paper}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Item</TableCell>
+                              <TableCell>Description</TableCell>
+                              <TableCell>Quantity</TableCell>
+                              <TableCell>Unit</TableCell>
+                              <TableCell>Cost</TableCell>
+                              <TableCell>Total Amount</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {category.materials.map((material, matIndex) => (
+                              <TableRow key={matIndex}>
+                                <TableCell>{material.item}</TableCell>
+                                <TableCell>{material.description}</TableCell>
+                                <TableCell>{material.quantity}</TableCell>
+                                <TableCell>{material.unit}</TableCell>
+                                <TableCell>PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(material.cost)}</TableCell>
+                                <TableCell>PHP {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(material.totalAmount)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* Floors and Progress */}
+        <Box mt={4}>
+          <Typography variant="h5" gutterBottom>
+            Floors and Progress
+          </Typography>
+          
+          {project.floors && project.floors.length > 0 ? (
             project.floors.map((floor) => (
               <Accordion
                 key={floor._id}
@@ -205,123 +394,132 @@ const ProjectProgress = () => {
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
-  <Typography variant="h6">Tasks</Typography>
+                  <Typography variant="h6">Tasks</Typography>
 
-   {/* Floor Images */}
-   {floor.images && floor.images.length > 0 && (
-                  <Box display="flex" flexWrap="wrap" gap={2} mb={2}>
-                    {floor.images.map((image, index) => (
-                      <Box key={index} textAlign="center" onClick={() => handleImageClick(image)}>
-                        <img
-                          src={image.path}
-                          alt={`Floor ${floor.name} Image ${index + 1}`}
-                          style={{
-                            width: '150px',
-                            height: '150px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
+                  {/* Floor Images */}
+                  {floor.images && floor.images.length > 0 && (
+                    <Box display="flex" flexWrap="wrap" gap={2} mb={2}>
+                      {floor.images.map((image, index) => (
+                        <Box key={index} textAlign="center" onClick={() => handleImageClick(image)}>
+                          <img
+                            src={image.path}
+                            alt={`Floor ${floor.name} Image ${index + 1}`}
+                            style={{
+                              width: '150px',
+                              height: '150px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          />
+                          <Typography variant="body2" mt={1}>
+                            {image.remark || 'No remark'}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+
+                  {/* Task Images */}
+                  {floor.tasks && floor.tasks.length > 0 ? (
+                    floor.tasks.map((task) => (
+                      <Box key={task._id} mb={4}>
+                        {/* Task Name and Progress Bar */}
+                        <Box display="flex" alignItems="center" mb={1}>
+                          <Typography variant="body1" sx={{ flex: 1 }}>
+                            {task.name || 'Unnamed Task'}
+                          </Typography>
+                          <Typography variant="body2" sx={{ marginLeft: 2 }}>
+                            {Math.round(task.progress || 0)}%
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={task.progress || 0}
+                          sx={{
+                            height: 10,
+                            borderRadius: 5,
+                            [`& .MuiLinearProgress-bar`]: {
+                              backgroundColor: '#a7b194',
+                            },
+                            backgroundColor: '#e0e0e0',
                           }}
                         />
-                        <Typography variant="body2" mt={1}>
-                          {image.remark || 'No remark'}
-                        </Typography>
+
+                        {/* Task Images */}
+                        {task.images && task.images.length > 0 && (
+                          <Box mt={2} display="flex" flexWrap="wrap" gap={2}>
+                            {task.images.map((image, index) => (
+                              <Box key={index} textAlign="center" onClick={() => handleImageClick(image)}>
+                                <img
+                                  src={image.path}
+                                  alt={`Task ${task.name} Image ${index + 1}`}
+                                  style={{
+                                    width: '150px',
+                                    height: '150px',
+                                    objectFit: 'cover',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                  }}
+                                />
+                                <Typography variant="body2" mt={1}>
+                                  {image.remark || 'No remark'}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
                       </Box>
-                    ))}
-                  </Box>
-  )}
-
-  {/* Task Images */}
-{floor.tasks &&
-  floor.tasks.map((task) => (
-    <Box key={task._id} mb={4}>
-      {/* Task Name and Progress Bar */}
-      <Box display="flex" alignItems="center" mb={1}>
-        <Typography variant="body1" sx={{ flex: 1 }}>
-          {task.name || 'Unnamed Task'}
-        </Typography>
-        <Typography variant="body2" sx={{ marginLeft: 2 }}>
-          {Math.round(task.progress || 0)}%
-        </Typography>
-      </Box>
-      <LinearProgress
-        variant="determinate"
-        value={task.progress || 0}
-        sx={{
-          height: 10,
-          borderRadius: 5,
-          [`& .MuiLinearProgress-bar`]: {
-            backgroundColor: '#a7b194',
-          },
-          backgroundColor: '#e0e0e0',
-        }}
-      />
-
-      {/* Task Images */}
-      {task.images && task.images.length > 0 && (
-        <Box mt={2} display="flex" flexWrap="wrap" gap={2}>
-          {task.images.map((image, index) => (
-            <Box key={index} textAlign="center" onClick={() => handleImageClick(image)}>
-              <img
-                src={image.path}
-                alt={`Task ${task.name} Image ${index + 1}`}
-                style={{
-                  width: '150px',
-                  height: '150px',
-                  objectFit: 'cover',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                }}
-              />
-              <Typography variant="body2" mt={1}>
-                {image.remark || 'No remark'}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      )}
-    </Box>
-  ))}
-
-              </AccordionDetails>
-            </Accordion>
-          ))}
-      </Box>
-
-      {/* Modal for Full-View Image */}
-      <Dialog open={!!selectedImage} onClose={handleCloseModal} maxWidth="lg" fullWidth  PaperProps={{
-        style: {
-          backgroundColor: 'transparent', 
-          boxShadow: 'none', 
-        },
-      }}>
-        <DialogContent sx={{ position: 'relative' }}>
-          <IconButton
-            onClick={handleCloseModal}
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              background: 'rgba(0, 0, 0, 0.5)',
-              color: '#fff',
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-          {selectedImage && (
-            <img
-              src={selectedImage.path}
-              alt={selectedImage.remark || 'Full view'}
-              style={{ width: '100%', height: 'auto', borderRadius: '8px' }}
-            />
-          )}
-          {selectedImage?.remark && (
-            <Typography variant="body1" align="center" mt={2}>
-              {selectedImage.remark}
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="textSecondary">
+                      No tasks available for this floor.
+                    </Typography>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            ))
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No floors data available.
             </Typography>
           )}
-        </DialogContent>
-      </Dialog>
+        </Box>
+
+        {/* Modal for Full-View Image */}
+        <Dialog open={!!selectedImage} onClose={handleCloseModal} maxWidth="lg" fullWidth PaperProps={{
+          style: {
+            backgroundColor: 'transparent', 
+            boxShadow: 'none', 
+          },
+        }}>
+          <DialogContent sx={{ position: 'relative' }}>
+            <IconButton
+              onClick={handleCloseModal}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                background: 'rgba(0, 0, 0, 0.5)',
+                color: '#fff',
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+            {selectedImage && (
+              <img
+                src={selectedImage.path}
+                alt={selectedImage.remark || 'Full view'}
+                style={{ width: '100%', height: 'auto', borderRadius: '8px' }}
+              />
+            )}
+            {selectedImage?.remark && (
+              <Typography variant="body1" align="center" mt={2} sx={{ color: 'white', backgroundColor: 'rgba(0,0,0,0.7)', p: 1 }}>
+                {selectedImage.remark}
+              </Typography>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <Typography variant="body2" color="textSecondary" mt={4}>
           LAST UPDATE:{' '}

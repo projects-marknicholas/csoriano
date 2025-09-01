@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import sorianoLogo from "../assets/sorianoLogo.jpg";
 import AlertModal from "../components/AlertModal";
+import ChatComponent from "../components/ChatComponent";
 import { uploadToCloudinary } from "../hooks/useCloudinary";
 import {
   Box,
@@ -124,6 +125,7 @@ const ProjectList = () => {
   const [imageToDelete, setImageToDelete] = useState(null);
   const [projectImage, setProjectImage] = useState(null);
   const [projectImagePreview, setProjectImagePreview] = useState(null);
+  const [chatProjectId, setChatProjectId] = useState(null);
 
   const toggleDetails = (section) => {
     setExpandedSections((prev) => ({
@@ -282,7 +284,6 @@ const ProjectList = () => {
     console.log("Filtered projects:", filterProjects());
   }, [projects, searchTerm]);
 
-  console.log(projects);
   const handleUpdateTaskImageRemark = (
     floorIndex,
     taskIndex,
@@ -796,32 +797,6 @@ const ProjectList = () => {
     }
   };
 
-  // Handle deleting a project
-  const handleDeleteProject = async () => {
-    try {
-      await axios.delete(
-        `${import.meta.env.VITE_LOCAL_URL}/api/project/${selectedProject._id}`,
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
-      );
-
-      setProjects(
-        projects.filter((project) => project._id !== selectedProject._id)
-      );
-      setShowDeleteModal(false);
-      setSelectedProject(null);
-      showAlert("Success", "Project deleted successfully!", "success");
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      showAlert(
-        "Error",
-        "Failed to delete project. Please try again.",
-        "error"
-      );
-    }
-  };
-
   // Reset the project form
   const resetProjectForm = () => {
     setNewProject({
@@ -870,6 +845,10 @@ const ProjectList = () => {
       console.error("Error starting project:", error);
       showAlert("Error", "Failed to start project. Please try again.", "error");
     }
+  };
+
+  const handleChat = async (projectId) => {
+    setChatProjectId(projectId);
   };
 
   const handlePostponeProject = async (projectId) => {
@@ -940,6 +919,7 @@ const ProjectList = () => {
           project._id === updatedProject._id ? updatedProject : project
         )
       );
+      
       showAlert("Success", "Project ended successfully!", "success");
     } catch (error) {
       console.error("Error ending project:", error);
@@ -1110,31 +1090,60 @@ const ProjectList = () => {
   };
 
   // Helper functions for floors and tasks
-  const handleFloorChange = (floorIndex, key, value) => {
+  const handleFloorChange = (floorIndex, key, value, isManual = false) => {
     const updatedFloors = newProject.floors.map((floor, index) => {
       if (index === floorIndex) {
+        // For progress field, ensure it's a valid number between 0-100
+        if (key === "progress") {
+          const numericValue = parseInt(value, 10);
+          const validProgress = isNaN(numericValue) 
+            ? 0 
+            : Math.min(100, Math.max(0, numericValue));
+          
+          return { 
+            ...floor, 
+            [key]: validProgress,
+            isManual: isManual // Set the manual flag
+          };
+        }
+        
         return { ...floor, [key]: value };
       }
       return floor;
     });
+    
     setNewProject({ ...newProject, floors: updatedFloors });
   };
 
-  const handleTaskChange = (floorIndex, taskIndex, key, value) => {
-    const updatedTasks = newProject.floors[floorIndex].tasks.map(
-      (task, index) => {
-        if (index === taskIndex) {
-          return { ...task, [key]: value };
+  const handleTaskChange = (floorIndex, taskIndex, key, value, isManual = false) => {
+    const updatedTasks = newProject.floors[floorIndex].tasks.map((task, index) => {
+      if (index === taskIndex) {
+        // For progress field, ensure it's a valid number between 0-100
+        if (key === "progress") {
+          const numericValue = parseInt(value, 10);
+          const validProgress = isNaN(numericValue) 
+            ? 0 
+            : Math.min(100, Math.max(0, numericValue));
+          
+          return { 
+            ...task, 
+            [key]: validProgress,
+            isManual: isManual // Set the manual flag
+          };
         }
-        return task;
+        
+        return { ...task, [key]: value };
       }
-    );
+      return task;
+    });
+    
     const updatedFloors = newProject.floors.map((floor, index) => {
       if (index === floorIndex) {
         return { ...floor, tasks: updatedTasks };
       }
       return floor;
     });
+    
     setNewProject({ ...newProject, floors: updatedFloors });
   };
 
@@ -1499,6 +1508,7 @@ const ProjectList = () => {
       (project) =>
         project &&
         project.name &&
+        project.status !== "finished" &&
         project.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
@@ -1564,17 +1574,17 @@ const ProjectList = () => {
                 </Button>
               </Box>
               <Typography variant="subtitle1" gutterBottom>
-                Total Projects: {filteredProjects.length}
+                Total Projects: {filteredProjects.filter((project) => project.status !== "finished").length}
               </Typography>
 
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Project Image</TableCell>
+                      <TableCell>Floor Plan Image</TableCell>
                       <TableCell>Project Name</TableCell>
                       <TableCell>Project Owner</TableCell>
-                      <TableCell>Project Contractor</TableCell>
+                      <TableCell>Project Design Engineer</TableCell>
                       <TableCell>Date Created</TableCell>
                       <TableCell>Cost Tier</TableCell>
                       <TableCell>Status</TableCell>
@@ -1722,6 +1732,17 @@ const ProjectList = () => {
                                 ? "Automatic"
                                 : "Manual"}
                             </Button>
+                          </Tooltip>&nbsp;
+                          <Tooltip>
+                            <Button
+                              variant="contained"
+                              color="secondary"
+                              size="small"
+                              sx={{ ml: 1 }}
+                              onClick={() => handleChat(project._id)}
+                            >
+                              Chat
+                            </Button>
                           </Tooltip>
                           <Tooltip title="Delete Project">
                             <IconButton
@@ -1760,7 +1781,7 @@ const ProjectList = () => {
 
             <DialogContent dividers>
               <Typography variant="subtitle1" gutterBottom>
-                Project Image
+                Floor Plan Image
               </Typography>
               
               {projectImagePreview ? (
@@ -1790,7 +1811,7 @@ const ProjectList = () => {
                 </Box>
               ) : (
                 <Button variant="contained" component="label">
-                  Upload Project Image
+                  Upload Floor Plan
                   <input
                     type="file"
                     accept="image/*"
@@ -1799,6 +1820,7 @@ const ProjectList = () => {
                   />
                 </Button>
               )}
+
               {/* Project Name */}
               <TextField
                 fullWidth
@@ -2018,12 +2040,13 @@ const ProjectList = () => {
                       margin="dense"
                       label="Progress"
                       type="number"
-                      value={floor.progress}
+                      value={floor.progress || 0}
                       onChange={(e) =>
                         handleFloorChange(
                           floorIndex,
                           "progress",
-                          parseInt(e.target.value, 10)
+                          e.target.value,
+                          true
                         )
                       }
                     />
@@ -2180,13 +2203,14 @@ const ProjectList = () => {
                           margin="dense"
                           label="Task Progress"
                           type="number"
-                          value={task.progress}
+                          value={task.progress || 0}
                           onChange={(e) =>
                             handleTaskChange(
                               floorIndex,
                               taskIndex,
                               "progress",
-                              parseInt(e.target.value, 10)
+                              e.target.value,
+                              true
                             )
                           }
                         />
@@ -2397,7 +2421,7 @@ const ProjectList = () => {
             {/* Project Image */}
             {selectedProject.projectImage && (
               <Box mb={2}>
-                <Typography variant="subtitle2">Project Image:</Typography>
+                <Typography variant="subtitle2">Floor Plan Image:</Typography>
                 <img
                   src={selectedProject.projectImage}
                   alt="Project"
@@ -2708,6 +2732,8 @@ const ProjectList = () => {
       />
     </Box>
   </ThemeProvider>
+
+  <ChatComponent projectId={chatProjectId} user="DesignEngineer" />
 </>
 );
 };

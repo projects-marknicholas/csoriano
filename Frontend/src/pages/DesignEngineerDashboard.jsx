@@ -69,8 +69,8 @@ const DesignEngineerDashboard = () => {
   }
 
   const project = {
-    id: '688cea7ddc87834879828629',   // Replace this with actual project ID
-    name: 'Project A',  // Project name (could be dynamic)
+    id: '68aa852cd3de9ef500b55d1c',
+    name: 'Project A',
   };
 
   return (
