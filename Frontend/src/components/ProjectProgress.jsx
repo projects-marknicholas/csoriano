@@ -221,6 +221,8 @@ const ProjectProgress = () => {
   return (
     <div className={styles.container}>
       <Navbar />
+
+      <img src={project.projectImage}/>
       <Box p={3}>
         <Typography variant="h4" gutterBottom className={styles.title}>
           {project.name ? project.name.toUpperCase() : 'Untitled Project'}

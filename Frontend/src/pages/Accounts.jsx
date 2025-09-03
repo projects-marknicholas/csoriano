@@ -52,6 +52,7 @@ const Accounts = () => {
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("info");
+  const [passwordError, setPasswordError] = useState("");
 
   // Function to show alerts
   const showAlert = (title, message, type = "info") => {
@@ -113,11 +114,36 @@ const Accounts = () => {
     setFilteredUsers(tempUsers);
   }, [searchQuery, filterRole, filterResetPassword, users]);
 
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long";
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Password must contain at least one number";
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return "Password must contain at least one special character";
+    }
+    return "";
+  };
+
   // Handle form submission for creating a new user
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
+      const passwordValidationError = validatePassword(formData.password);
+      if (passwordValidationError) {
+        setPasswordError(passwordValidationError);
+        return;
+      }
+
       // Create username from firstname and lastname
       const username = `${formData.Firstname.toLowerCase()}${formData.Lastname.toLowerCase()}`;
 
@@ -368,9 +394,12 @@ const Accounts = () => {
               fullWidth
               sx={{ mt: 2 }}
               value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, password: e.target.value });
+                setPasswordError(validatePassword(e.target.value));
+              }}
+              error={!!passwordError}
+              helperText={passwordError || "Password must be at least 8 characters with uppercase, lowercase, number, and special character"}
               required
             />
 
@@ -383,7 +412,7 @@ const Accounts = () => {
                 backgroundColor: "#3f5930",
                 "&:hover": { backgroundColor: "#6b7c61" },
               }}
-              disabled={isLoading}
+              disabled={isLoading || !!passwordError}
             >
               {isLoading ? "Creating..." : "Create"}
             </Button>

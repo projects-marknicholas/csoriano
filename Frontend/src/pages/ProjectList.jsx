@@ -126,6 +126,7 @@ const ProjectList = () => {
   const [projectImage, setProjectImage] = useState(null);
   const [projectImagePreview, setProjectImagePreview] = useState(null);
   const [chatProjectId, setChatProjectId] = useState(null);
+  const [isChat, setIsChat] = useState(false);
 
   const toggleDetails = (section) => {
     setExpandedSections((prev) => ({
@@ -849,6 +850,7 @@ const ProjectList = () => {
 
   const handleChat = async (projectId) => {
     setChatProjectId(projectId);
+    setIsChat(true);
   };
 
   const handlePostponeProject = async (projectId) => {
@@ -2733,7 +2735,7 @@ const ProjectList = () => {
     </Box>
   </ThemeProvider>
 
-  <ChatComponent projectId={chatProjectId} user="DesignEngineer" />
+  <ChatComponent projectId={chatProjectId} user="DesignEngineer" isChatOpen={isChat} onClose={() => setIsChat(false)} />
 </>
 );
 };

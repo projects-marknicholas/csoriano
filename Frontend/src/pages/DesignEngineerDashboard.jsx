@@ -6,7 +6,6 @@ import Picture from "../assets/picture2.jpg";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import { useAuthContext } from "../hooks/useAuthContext";
 import axios from 'axios';
-import ChatComponent from "../components/ChatComponent";  // Import the ChatComponent
 
 const DesignEngineerDashboard = () => {
   const { user } = useAuthContext();
@@ -107,9 +106,6 @@ const DesignEngineerDashboard = () => {
               <img src={Picture} alt="Generate BOM" className={styles.dashboardImage} />
               <div className={styles.cardText}>GENERATE A BOM</div>
             </Link>
-
-            {/* ChatComponent here */}
-            <ChatComponent projectId={project.id} user="DesignEngineer" /> {/* Display chat */}
           </>
         ) : (
           <div className={styles.blockingOverlay}>

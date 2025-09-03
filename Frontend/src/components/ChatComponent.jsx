@@ -5,14 +5,18 @@ import styles from './ChatComponent.module.css';
 
 const API_URL = import.meta.env.VITE_LOCAL_URL || 'http://localhost:4000';
 
-const ChatComponent = ({ projectId, user }) => {
+const ChatComponent = ({ projectId, user, isChatOpen = false, onClose }) => {
+  const [internalIsChatOpen, setInternalIsChatOpen] = useState(isChatOpen);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState('');
   const [file, setFile] = useState(null);
   const eventSourceRef = useRef(null);
+
+  useEffect(() => {
+    setInternalIsChatOpen(isChatOpen);
+  }, [isChatOpen]);
 
   useEffect(() => {
     if (isChatOpen) {
@@ -138,14 +142,23 @@ const ChatComponent = ({ projectId, user }) => {
     }
   };
 
+  const handleClose = () => {
+    setInternalIsChatOpen(false);
+    onClose();
+  };
+
+  const handleOpen = () => {
+    setInternalIsChatOpen(true);
+  };
+
   return (
     <>
-      {isChatOpen && (
+      {internalIsChatOpen && (
         <div className={styles.chatWindow}>
           <div className={styles.chatHeader}>
             <span>Live Chat - Project {projectId}</span>
             <div className={styles.status}></div>
-            <button onClick={() => setIsChatOpen(false)} className={styles.closeButton}>X</button>
+            <button onClick={handleClose} className={styles.closeButton}>X</button>
           </div>
           <div className={styles.chatBody}>
             {messages.length === 0 ? (
@@ -216,8 +229,8 @@ const ChatComponent = ({ projectId, user }) => {
         </div>
       )}
 
-      {!isChatOpen && (
-        <div className={styles.chatIcon} onClick={() => setIsChatOpen(true)}>
+      {!internalIsChatOpen && (
+        <div className={styles.chatIcon} onClick={handleOpen}>
           💬
           {messages.length > 0 && <span className={styles.notificationBadge}>{messages.length}</span>}
         </div>

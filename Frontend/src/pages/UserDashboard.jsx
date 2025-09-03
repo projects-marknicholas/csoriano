@@ -21,6 +21,7 @@ const UserDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const containerRef = useRef(null);
   const [chatProjectId, setChatProjectId] = useState(null);
+  const [isChat, setIsChat] = useState(false);
 
   // Function to show alerts
   const showAlert = (title, message, type = "info") => {
@@ -101,6 +102,7 @@ const UserDashboard = () => {
 
   const handleChat = async (projectId) => {
     setChatProjectId(projectId);
+    setIsChat(true);
   };
 
   return (
@@ -126,12 +128,12 @@ const UserDashboard = () => {
         {projects.length > 0 ? (
           projects.map(project => (
             <div key={project._id} className={styles.card}>
-              <img src={image} alt={project.name} />
+              <img src={project.projectImage} alt={project.name} />
               <div className={styles.cardContent}>
                 <h1>{project.name}</h1>
                 <div className={styles.projectInfo}>
-                  <Link to={`/project/${project._id}`}>{project.status}</Link>
-                  <button onClick={() => handleChat(project._id)} className={styles.projectInfo}>Chat</button>
+                  <Link to={`/project/${project._id}`} className={styles.statusbtn}>{project.status}</Link>
+                  <button onClick={() => handleChat(project._id)} className={styles.projectChat}>Chat</button>
                 </div>
               </div>
             </div>
@@ -143,7 +145,7 @@ const UserDashboard = () => {
 
       {/* Only display ChatComponent if password is changed */}
       {isPasswordChanged && (
-        <ChatComponent projectId={chatProjectId} user="User" />
+        <ChatComponent projectId={chatProjectId} user="User" isChatOpen={isChat} onClose={() => setIsChat(false)} />
       )}
 
       {/* Alert Modal */}
