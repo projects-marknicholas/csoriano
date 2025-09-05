@@ -1,0 +1,162 @@
+body {
+  background-color: #f5f7fa;
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  color: #2c3e50;
+}
+
+.Container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: start;
+  padding: 4em;
+  gap: 4em;
+}
+
+.TopSide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.TopSide h5 {
+  font-size: 48px;
+  margin: 0;
+  color: #2c3e50;
+  letter-spacing: 1px;
+  border-bottom: 2px solid #3f5930;
+  padding-bottom: 8px;
+  width: fit-content;
+}
+
+.TopSide p {
+  margin: 0;
+  font-size: 18px;
+  color: #7f8c8d;
+}
+
+.baller {
+  font-size: 16px;
+  color: #7f8c8d;
+}
+
+.form1 {
+  background-color: #ffffff;
+  padding: 2em;
+  border: 1px solid #dce1e7;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+.form1 input[type="text"],
+.form1 input[type="password"] {
+  width: 100%;
+  border-radius: 8px;
+  height: 48px;
+  border: 1px solid #ced4da;
+  background-color: #f9fafc;
+  padding: 0 1em;
+  font-size: 16px;
+  transition: border 0.3s ease;
+}
+
+.form1 input:focus {
+  outline: none;
+  border-color: #3f5930;
+}
+
+.form1 button {
+  background-color: #3f5930;
+  color: white;
+  border: none;
+  width: 100%;
+  border-radius: 8px;
+  height: 48px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: background-color 0.3s ease, opacity 0.3s;
+}
+
+.form1 button:hover {
+  cursor: pointer;
+  background-color: #314524;
+  opacity: 0.95;
+}
+
+.form1 label {
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.error1 {
+  color: #e74c3c;
+  font-size: 14px;
+}
+
+.form1 .passwordOptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.form1 .passwordOptions a {
+  text-decoration: none;
+  color: #3f5930;
+  font-weight: 500;
+}
+
+.form1 .passwordOptions a:hover {
+  text-decoration: underline;
+}
+
+.loadingSpinnerContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  margin: 20px 0;
+}
+
+.spinner {
+  border: 6px solid #ecf0f1;
+  border-top: 6px solid #3f5930;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Tweaks */
+@media (max-width: 768px) {
+  .Container {
+    padding: 2em;
+    align-items: center;
+  }
+
+  .TopSide h5 {
+    font-size: 36px;
+  }
+
+  .TopSide p {
+    font-size: 16px;
+  }
+
+  .form1 {
+    width: 100%;
+    max-width: 350px;
+  }
+}

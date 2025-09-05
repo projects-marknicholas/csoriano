@@ -1,0 +1,104 @@
+.container {
+  padding: 20px;
+  background-color: #f9f9f9; /* Light background for better visibility */
+}
+
+.searchContainer {
+  margin-bottom: 20px;
+  text-align: center; /* Aligns the search section text to center */
+}
+
+.searchInputContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px; /* Adds space between the date input and the search button */
+  justify-content: center; /* Centers the search input and button */
+}
+
+.dateInput {
+  width: 150px; /* Adjust the width if necessary */
+}
+
+.searchButton {
+  padding: 8px 15px; /* Adds some padding to the button */
+  font-size: 16px;
+  background-color: #007bff; /* Button background color */
+  color: white; /* Text color */
+  border: none; /* Removes the border */
+  border-radius: 5px; /* Adds rounded corners */
+  cursor: pointer; /* Cursor pointer for clickable */
+  transition: background-color 0.3s ease; /* Adds a smooth color transition */
+}
+
+.searchButton:hover {
+  background-color: #0056b3; /* Darker shade on hover */
+}
+
+/* Pagination Container */
+.paginationContainer {
+  display: flex;
+  justify-content: center; /* Centers the pagination */
+  margin-top: 20px;
+}
+
+.projectList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.projectCard {
+  display: flex;
+  flex-direction: row;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 500px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  text-decoration: none; /* Remove underline */
+}
+
+.projectCard:hover {
+  transform: translateY(-5px); /* Adds a hover effect */
+  text-decoration: none; /* Ensure no underline on hover */
+}
+
+.projectImage {
+  width: 150px;
+  height: 150px;
+  object-fit: cover; /* Ensures the image fits without distortion */
+  border-right: 1px solid #ddd;
+}
+
+.projectDetails {
+  padding: 10px;
+  flex: 1; /* Ensures content takes the remaining space */
+}
+
+.projectDetails h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.projectDetails p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.projectDetails strong {
+  color: #000;
+}
+
+.noProjectsMessage {
+  text-align: center;
+  font-size: 16px;
+  color: #777;
+  margin-top: 20px;
+}

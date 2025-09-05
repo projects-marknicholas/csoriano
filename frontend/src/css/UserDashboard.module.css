@@ -1,0 +1,245 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Montserrat:wght@700&display=swap');
+
+/* Global Font Setup */
+body {
+  font-family: 'Poppins', sans-serif; /* Modern, readable font */
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #f4f7f6; /* Light background for clean look */
+  color: #333; /* Dark text for readability */
+}
+
+/* Welcome Banner */
+.welcome-banner {
+  background: linear-gradient(135deg, #1abc9c, #16a085); /* Vibrant green gradient */
+  color: white;
+  padding: 30px;
+  font-size: 30px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Soft shadow */
+  margin: 20px 0;
+  letter-spacing: 1px;
+}
+
+/* Name Banner Section */
+.NameBanner {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+  padding: 15px;
+}
+
+.NameBanner p {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(45deg, hsla(152, 87%, 63%, 0.781), #ff4f46); /* Warm orange-red gradient */
+  width: 90%;
+  height: 100px;
+  text-align: center;
+  color: white;
+  border-radius: 50px;
+  font-size: 36px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+/* Card Image Section */
+.card img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Content Section */
+.cardContent {
+  padding: 20px;
+  text-align: center;
+  background-color: #ffffff;
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
+
+.cardContent h1 {
+  font-size: 26px;
+  color: #2c3e50; /* Dark color for the text */
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-family: 'Montserrat', sans-serif; /* Professional font for headings */
+}
+
+/* Project Info Section */
+.projectInfo {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.statusbtn {
+  text-decoration: none;
+  color: #fff;
+  background-color: #f39c12; /* Construction yellow for buttons */
+  padding: 10px 20px;
+  border-radius: 8px;
+  margin-right: 15px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.statusbtn:hover {
+  background-color: #e67e22; /* Darker yellow on hover */
+}
+
+.projectChat {
+  text-decoration: none;
+  color: #fff;
+  background-color: #3498db; /* Strong blue for communication */
+  padding: 10px 18px;
+  border-radius: 8px;
+  outline: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.projectChat:hover {
+  background-color: #2980b9; /* Darker blue on hover */
+}
+
+.projectInfo p {
+  padding: 8px 18px;
+  border-radius: 25px;
+  background-color: #34495e; /* Dark gray background for text contrast */
+  color: #fff;
+  font-size: 16px;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Hover Effect on Card */
+.card:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+/* Card Container Styling */
+.cardContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  padding: 30px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  overflow-x: auto;
+}
+
+/* Scrollbar Styling for Card Container */
+.cardContainer::-webkit-scrollbar {
+  height: 12px;
+}
+
+.cardContainer::-webkit-scrollbar-thumb {
+  background-color: #16a085;
+  border-radius: 10px;
+}
+
+.cardContainer::-webkit-scrollbar-track {
+  background-color: #ecf0f1;
+}
+
+/* Card Styling */
+.card {
+  flex: 0 0 290px;
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-decoration: none;
+  background-color: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+/* Project Progress Section */
+.projectProgress {
+  margin-top: 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #34495e;
+  text-align: center;
+  background-color: #ecf0f1; /* Lighter gray */
+  padding: 10px;
+  border-radius: 20px;
+  transition: background-color 0.3s ease;
+}
+
+/* Progress Bar Hover Effect */
+.projectProgress:hover {
+  background-color: #dcdcdc; /* Darker gray on hover */
+}
+
+/* Button and Link Styling for Project */
+.projectChat,
+.statusbtn {
+  text-decoration: none;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Chat Icon Styling */
+.chat-icon {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #3498db;
+  color: white;
+  border-radius: 50%;
+  padding: 15px;
+  box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.chat-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+  .cardContainer {
+    flex-direction: column;
+    gap: 20px;
+    padding: 15px;
+  }
+
+  .NameBanner p {
+    font-size: 28px;
+    width: 100%;
+  }
+
+  .cardContent h1 {
+    font-size: 24px;
+  }
+
+  .card {
+    flex: 0 0 100%;
+  }
+}
