@@ -32,7 +32,7 @@ import {
 import { Close, SwapHoriz  } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
-const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToReplace, user }) => {
+export const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToReplace, user }) => {
   const [materials, setMaterials] = useState([]);
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -125,7 +125,7 @@ const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToRepl
   );
 };
 
-const GeneratorModal = ({
+export const GeneratorModal = ({
   isOpen,
   onClose,
   onSubmit,

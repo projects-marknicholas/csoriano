@@ -50,6 +50,7 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import GeneratorModal from "../components/GeneratorModal";
 
 const Notification = ({ message, onClose }) => (
   <div
@@ -145,7 +146,153 @@ const ProjectList = () => {
   const [projectImage, setProjectImage] = useState(null);
   const [projectImagePreview, setProjectImagePreview] = useState(null);
   const [chatProjectId, setChatProjectId] = useState(null);
+  const [chatProjectName, setChatProjectName] = useState(null);
   const [isChat, setIsChat] = useState(false);
+
+  // BOM
+  const [generatorModalOpen, setGeneratorModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    totalArea: '',
+    avgFloorHeight: '',
+    selectedTemplateId: '',
+    numFloors: '',
+    roomCount: '',
+    foundationDepth: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [bom, setBom] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [isLoadingBOM, setIsLoadingBOM] = useState(false);
+  const [selectedProjectForBOM, setSelectedProjectForBOM] = useState(null);
+
+  const handleChange = (e) => {
+  const { name, value } = e.target;
+  const updatedFormData = { ...formData };
+  if (name === 'numFloors' && value > 5) {
+    updatedFormData[name] = 5;
+    setErrors({ ...errors, numFloors: 'Maximum allowed floors is 5. Resetting to 5.' });
+    showAlert("Validation Error", "Maximum allowed floors is 5. Resetting to 5.", "error");
+  } else if (name === 'avgFloorHeight') {
+    if (value > 15) {
+      updatedFormData[name] = 15;
+      setErrors({ ...errors, avgFloorHeight: 'Maximum floor height is 15 meters. Resetting to 15.' });
+      showAlert("Validation Error", "Maximum floor height is 15 meters. Resetting to 15.", "error");
+    } else if (value < 0) {
+      updatedFormData[name] = 0;
+      setErrors({ ...errors, avgFloorHeight: 'Floor height cannot be negative. Resetting to 0.' });
+      showAlert("Validation Error", "Floor height cannot be negative. Resetting to 0.", "error");
+    } else {
+      updatedFormData[name] = value;
+    }
+  } else {
+    updatedFormData[name] = value;
+  }
+  setFormData(updatedFormData);
+};
+
+const validateForm = () => {
+  const newErrors = {};
+  const requiredFields = ['totalArea', 'avgFloorHeight', 'roomCount', 'foundationDepth'];
+  requiredFields.forEach(field => !formData[field] && (newErrors[field] = 'This field is required'));
+  if (!selectedLocation) {
+    newErrors.location = 'Please select a location';
+    showAlert("Validation Error", "Please select a location.", "error");
+  }
+  if (!formData.numFloors) {
+    newErrors.numFloors = 'This field is required';
+    showAlert("Validation Error", "Number of floors is required.", "error");
+  }
+  if (!formData.selectedTemplateId) {
+    newErrors.selectedTemplateId = 'Please select a template';
+    showAlert("Validation Error", "Please select a template.", "error");
+  }
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+const handleSubmit = (e) => {
+  e.preventDefault();
+  if (validateForm()) {
+    setIsLoadingBOM(true);
+    const payload = {
+      totalArea: parseFloat(formData.totalArea),
+      numFloors: parseInt(formData.numFloors, 10),
+      avgFloorHeight: parseFloat(formData.avgFloorHeight),
+      templateId: formData.selectedTemplateId,
+      locationName: selectedLocation,
+      roomCount: parseInt(formData.roomCount, 10),
+      foundationDepth: parseFloat(formData.foundationDepth),
+    };
+    axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/bom/generate`, payload, {
+      headers: { Authorization: `Bearer ${user.token}` },
+    })
+      .then((response) => {
+        setBom(response.data.bom);
+        setGeneratorModalOpen(false);
+        showAlert("Success", "BOM generated successfully.", "success");
+      })
+      .catch((error) => {
+        console.error('Error generating BOM:', error);
+        showAlert("Error", error.response?.data?.error || "An unexpected error occurred.", "error");
+      })
+      .finally(() => setIsLoadingBOM(false));
+  }
+};
+
+const handleGenerateBOMPDF = (version = 'client') => {
+  if (!bom) return;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  let yPosition = 20;
+  doc.addImage(sorianoLogo, 'JPEG', 20, 10, pageWidth - 40, (pageWidth - 40) * 0.2);
+  yPosition += 30;
+  doc.setFontSize(18);
+  doc.text("Generated BOM", pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
+  doc.text(`Project: ${selectedProjectForBOM?.name || 'Custom'}`, 10, yPosition);
+  yPosition += 10;
+  if (version === 'client') {
+    doc.text(`Grand Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
+    yPosition += 15;
+    doc.autoTable({
+      head: [['#', 'Category', 'Total Amount (PHP)']],
+      body: bom.categories.map((cat, i) => [i + 1, cat.category.toUpperCase(), `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(cat.materials.reduce((sum, m) => sum + m.totalAmount, 0))}`]),
+      startY: yPosition,
+      headStyles: { fillColor: [41, 128, 185] },
+      bodyStyles: { textColor: [44, 62, 80] },
+    });
+  } else {
+    // Simplified design engineer version for brevity
+    doc.text(`Original Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.originalCosts.totalProjectCost || 0)}`, 10, yPosition);
+    yPosition += 10;
+    doc.text(`Marked-Up Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
+    yPosition += 20;
+    bom.categories.forEach((cat, i) => {
+      doc.text(cat.category.toUpperCase(), 10, yPosition);
+      yPosition += 5;
+      doc.autoTable({
+        head: [['Item', 'Quantity', 'Unit Cost (PHP)', 'Total (PHP)']],
+        body: cat.materials.map(m => [m.item, m.quantity || 'N/A', `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.cost)}`, `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.totalAmount)}`]),
+        startY: yPosition,
+      });
+      yPosition = doc.lastAutoTable.finalY + 5;
+    });
+  }
+  doc.save(`BOM_${version}_${selectedProjectForBOM?.name || 'custom'}.pdf`);
+};
+
+const closeGeneratorModal = () => {
+  setGeneratorModalOpen(false);
+  setFormData({ totalArea: '', avgFloorHeight: '', selectedTemplateId: '', numFloors: '', roomCount: '', foundationDepth: '' });
+  setSelectedLocation("");
+  setErrors({});
+  setSelectedProjectForBOM(null);
+};
+
+const handleLocationSelect = (locationName) => {
+  setSelectedLocation(locationName);
+};
+  // BOM END
 
   // Pop-out notification state
   const [newMessageNotification, setNewMessageNotification] = useState(false);
@@ -669,6 +816,27 @@ const ProjectList = () => {
     }
   };
 
+  const refreshProjects = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/project/contractor`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      
+      let projectsData = response.data;
+      // Handle different response structures as you did in useEffect
+      if (response.data && response.data.data) {
+        projectsData = response.data.data;
+      }
+      if (response.data && response.data.projects) {
+        projectsData = response.data.projects;
+      }
+      
+      setProjects(projectsData);
+    } catch (error) {
+      console.error("Error refreshing projects:", error);
+    }
+  };
+
   // Handle updating an existing project
   const handleUpdateProject = async () => {
     try {
@@ -793,12 +961,21 @@ const ProjectList = () => {
         }
       );
 
+      const updatedProjectResponse = await axios.get(
+        `${import.meta.env.VITE_LOCAL_URL}/api/project/${editProjectId}`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+        }
+      );
+
       // Update the projects in the state with the updated project
       setProjects((prevProjects) =>
         prevProjects.map((project) =>
-          project._id === editProjectId ? response.data.project : project
+          project._id === editProjectId ? updatedProjectResponse.data : project
         )
       );
+
+      refreshProjects();
 
       // Reset local images
       setLocalImages({});
@@ -820,6 +997,36 @@ const ProjectList = () => {
         "error"
       );
     }
+  };
+
+  const handleSaveBOM = (BomId) => {
+    if (!BomId) {
+      showAlert("Error", "No project selected. Please select a project before saving.", "error");
+      return;
+    }
+  
+    const payload = {
+      bom: {
+        projectDetails: bom.projectDetails,
+        categories: bom.categories,
+        originalCosts: bom.originalCosts,
+        markedUpCosts: bom.markedUpCosts,
+      },
+    };
+    console.log('Selected Project ID:', BomId);
+
+    axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/project/${BomId}/boms`, payload, {
+      headers: { Authorization: `Bearer ${user.token}` },
+    })
+      .then(() => {
+        setBom(null);
+        showAlert("Success", "BOM saved to the project!", "success");
+      })
+      .catch((error) => {
+        console.error('Failed to save BOM to project:', error.response || error.message || error);
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to save BOM to the project.';
+        showAlert("Error", errorMessage, "error");
+      });
   };
 
   // Reset the project form
@@ -872,7 +1079,8 @@ const ProjectList = () => {
     }
   };
 
-  const handleChat = async (projectId) => {
+  const handleChat = async (projectName, projectId) => {
+    setChatProjectName(projectName);
     setChatProjectId(projectId);
     setIsChat(true);
   };
@@ -1229,203 +1437,6 @@ const ProjectList = () => {
     setShowDetailsModal(true);
   };
 
-  // Generate BOM PDF
-  const handleGenerateBOMPDF = (version = "client") => {
-    if (!selectedProject || !selectedProject.bom) {
-      showAlert(
-        "Error",
-        "BOM data is not available for this project.",
-        "error"
-      );
-      return;
-    }
-
-    const { bom, name, user: ownerName } = selectedProject;
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    let yPosition = 20; // Starting y position for details
-
-    // Add the logo at the top
-    const imgWidth = pageWidth - 40; // Adjust width to make it centered and smaller than page width
-    const imgHeight = imgWidth * 0.2; // Maintain aspect ratio
-    doc.addImage(sorianoLogo, "JPEG", 20, 10, imgWidth, imgHeight);
-    yPosition += imgHeight + 10; // Adjust y position below the logo
-
-    // Determine BOM Type (Project or Custom)
-    const bomType = bom.projectGenerated
-      ? "Project-Generated BOM"
-      : "Custom-Generated BOM";
-
-    // Add Title
-    doc.setFontSize(18);
-    doc.text(`${bomType}: ${name || "N/A"}`, pageWidth / 2, yPosition, {
-      align: "center",
-    });
-    doc.setFontSize(12);
-    yPosition += 10;
-
-    // Project details
-    doc.text(`Owner: ${ownerName || "N/A"}`, 10, yPosition);
-    yPosition += 10;
-    doc.text(
-      `Total Area: ${bom.projectDetails.totalArea || "N/A"} sqm`,
-      10,
-      yPosition
-    );
-    yPosition += 10;
-    doc.text(
-      `Number of Floors: ${bom.projectDetails.numFloors || "N/A"}`,
-      10,
-      yPosition
-    );
-    yPosition += 10;
-    doc.text(
-      `Floor Height: ${bom.projectDetails.avgFloorHeight || "N/A"} meters`,
-      10,
-      yPosition
-    );
-    yPosition += 10;
-
-    // Handle client vs. contractor-specific details
-    if (version === "client") {
-      const formattedGrandTotal = `PHP ${new Intl.NumberFormat("en-PH", {
-        style: "decimal",
-        minimumFractionDigits: 2,
-      }).format(bom.markedUpCosts.totalProjectCost || 0)}`;
-      doc.setFontSize(14);
-      doc.text(`Grand Total: ${formattedGrandTotal}`, 10, yPosition);
-      yPosition += 15;
-
-      doc.autoTable({
-        head: [["#", "Category", "Total Amount (PHP)"]],
-        body: bom.categories.map((category, index) => [
-          index + 1,
-          category.category.toUpperCase(),
-          `PHP ${new Intl.NumberFormat("en-PH", {
-            style: "decimal",
-            minimumFractionDigits: 2,
-          }).format(
-            category.materials.reduce(
-              (sum, material) => sum + material.totalAmount,
-              0
-            )
-          )}`,
-        ]),
-        startY: yPosition,
-        headStyles: { fillColor: [41, 128, 185] },
-        bodyStyles: { textColor: [44, 62, 80] },
-      });
-    } else if (version === "contractor") {
-      // Contractor-specific details
-      const originalProjectCost = `PHP ${new Intl.NumberFormat("en-PH", {
-        style: "decimal",
-        minimumFractionDigits: 2,
-      }).format(bom.originalCosts.totalProjectCost || 0)}`;
-      const originalLaborCost = `PHP ${new Intl.NumberFormat("en-PH", {
-        style: "decimal",
-        minimumFractionDigits: 2,
-      }).format(bom.originalCosts.laborCost || 0)}`;
-      const markup = bom.projectDetails.location.markup || 0;
-      const markedUpProjectCost = `PHP ${new Intl.NumberFormat("en-PH", {
-        style: "decimal",
-        minimumFractionDigits: 2,
-      }).format(bom.markedUpCosts.totalProjectCost || 0)}`;
-      const markedUpLaborCost = `PHP ${new Intl.NumberFormat("en-PH", {
-        style: "decimal",
-        minimumFractionDigits: 2,
-      }).format(bom.markedUpCosts.laborCost || 0)}`;
-
-      doc.setFontSize(14);
-      doc.text("Contractor Cost Breakdown", 10, yPosition);
-      yPosition += 10;
-
-      doc.setFontSize(12);
-      doc.text(
-        `Original Project Cost (without markup): ${originalProjectCost}`,
-        10,
-        yPosition
-      );
-      yPosition += 10;
-      doc.text(
-        `Original Labor Cost (without markup): ${originalLaborCost}`,
-        10,
-        yPosition
-      );
-      yPosition += 10;
-      doc.text(
-        `Location: ${
-          bom.projectDetails.location.name || "N/A"
-        } (Markup: ${markup}%)`,
-        10,
-        yPosition
-      );
-      yPosition += 10;
-      doc.text(`Marked-Up Project Cost: ${markedUpProjectCost}`, 10, yPosition);
-      yPosition += 10;
-      doc.text(`Marked-Up Labor Cost: ${markedUpLaborCost}`, 10, yPosition);
-      yPosition += 20;
-
-      // Detailed table with totals for each category
-      bom.categories.forEach((category, categoryIndex) => {
-        doc.setFontSize(12);
-        doc.text(category.category.toUpperCase(), 10, yPosition);
-        yPosition += 5;
-
-        doc.autoTable({
-          head: [
-            [
-              "Item",
-              "Description",
-              "Quantity",
-              "Unit",
-              "Unit Cost (PHP)",
-              "Total Amount (PHP)",
-            ],
-          ],
-          body: category.materials.map((material, index) => [
-            `${categoryIndex + 1}.${index + 1}`,
-            material.description || "N/A",
-            material.quantity ? material.quantity.toFixed(2) : "N/A",
-            material.unit || "N/A",
-            `PHP ${new Intl.NumberFormat("en-PH", {
-              style: "decimal",
-              minimumFractionDigits: 2,
-            }).format(material.cost || 0)}`,
-            `PHP ${new Intl.NumberFormat("en-PH", {
-              style: "decimal",
-              minimumFractionDigits: 2,
-            }).format(material.totalAmount || 0)}`,
-          ]),
-          startY: yPosition,
-          headStyles: { fillColor: [41, 128, 185] },
-          bodyStyles: { textColor: [44, 62, 80] },
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 5;
-
-        const categoryTotal = `PHP ${new Intl.NumberFormat("en-PH", {
-          style: "decimal",
-          minimumFractionDigits: 2,
-        }).format(
-          category.materials.reduce(
-            (sum, material) => sum + material.totalAmount,
-            0
-          )
-        )}`;
-        doc.text(
-          `Total for ${category.category.toUpperCase()}: ${categoryTotal}`,
-          10,
-          yPosition
-        );
-        yPosition += 15;
-      });
-    }
-
-    // Save the PDF
-    doc.save(`BOM_${name}_${bomType}.pdf`);
-  };
-
   const saveImageRemarkToServer = async (
     floorIndex,
     imageIndex,
@@ -1765,9 +1776,32 @@ const ProjectList = () => {
                               color="secondary"
                               size="small"
                               sx={{ ml: 1 }}
-                              onClick={() => handleChat(project._id)}
+                              onClick={() => handleChat(project.name, project._id)}
                             >
                               Chat
+                            </Button>
+                          </Tooltip>
+                          <Tooltip title="Generate BOM">
+                            <Button
+                              variant="contained"
+                              color="secondary"
+                              size="small"
+                              sx={{ ml: 1 }}
+                              onClick={() => {
+                                setSelectedProjectForBOM(project);
+                                setFormData({
+                                  totalArea: project.totalArea || '',
+                                  avgFloorHeight: project.avgFloorHeight || '',
+                                  selectedTemplateId: project.template || '',
+                                  numFloors: project.floors.length.toString() || '',
+                                  roomCount: project.roomCount || '',
+                                  foundationDepth: project.foundationDepth || ''
+                                });
+                                setSelectedLocation(project.location || '');
+                                setGeneratorModalOpen(true);
+                              }}
+                            >
+                              Generate BOM
                             </Button>
                           </Tooltip>
                           <Tooltip title="Delete Project">
@@ -2759,7 +2793,132 @@ const ProjectList = () => {
     </Box>
   </ThemeProvider>
 
-  <ChatComponent projectId={chatProjectId} user="DesignEngineer" isChatOpen={isChat} onClose={() => setIsChat(false)} />
+  <ChatComponent projectName={chatProjectName} projectId={chatProjectId} user="DesignEngineer" isChatOpen={isChat} onClose={() => setIsChat(false)} />
+  <GeneratorModal
+    isOpen={generatorModalOpen}
+    onClose={closeGeneratorModal}
+    onSubmit={handleSubmit}
+    formData={formData}
+    handleChange={handleChange}
+    errors={errors}
+    projects={projects}
+    handleProjectSelect={() => {}} 
+    selectedProject={selectedProjectForBOM}
+    isProjectBased={true}
+    locations={locations}
+    handleLocationSelect={handleLocationSelect}
+    selectedLocation={selectedLocation}
+    isLoadingProjects={isLoading}
+    isLoadingBOM={isLoadingBOM}
+    templates={templates}
+  />
+
+{bom && (
+  <Dialog
+    open={!!bom}
+    onClose={() => setBom(null)}
+    fullWidth
+    maxWidth="md"
+  >
+    <DialogTitle>
+      Generated BOM for {selectedProjectForBOM?.name || 'Custom Project'}
+      <IconButton
+        aria-label="close"
+        onClick={() => setBom(null)}
+        sx={{ position: "absolute", right: 8, top: 8 }}
+      >
+        <CloseIcon />
+      </IconButton>
+    </DialogTitle>
+    <DialogContent dividers>
+      <TableContainer>
+        <Table>
+          <TableBody>
+            <TableRow>
+              <TableCell><strong>Total Area</strong></TableCell>
+              <TableCell>{bom.projectDetails.totalArea} sqm</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Number of Floors</strong></TableCell>
+              <TableCell>{bom.projectDetails.numFloors}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Floor Height</strong></TableCell>
+              <TableCell>{bom.projectDetails.avgFloorHeight} meters</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Location</strong></TableCell>
+              <TableCell>{bom.projectDetails.location.name}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Markup</strong></TableCell>
+              <TableCell>{bom.projectDetails.location.markup}%</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Grand Total</strong></TableCell>
+              <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <Box mt={4}>
+        <Typography variant="h6">Materials</Typography>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Category</TableCell>
+                <TableCell>Item</TableCell>
+                <TableCell>Quantity</TableCell>
+                <TableCell>Total (PHP)</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {bom.categories.map((cat, ci) => cat.materials.map((mat, mi) => (
+                <TableRow key={`${ci}-${mi}`}>
+                  <TableCell>{cat.category.toUpperCase()}</TableCell>
+                  <TableCell>{mat.item}</TableCell>
+                  <TableCell>{mat.quantity || 'N/A'}</TableCell>
+                  <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(mat.totalAmount || 0)}</TableCell>
+                </TableRow>
+              )))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+    </DialogContent>
+    <DialogActions>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={() => handleGenerateBOMPDF('client')}
+      >
+        Download Client PDF
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={() => handleGenerateBOMPDF('designEngineer')}
+      >
+        Download Engineer PDF
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={() => handleSaveBOM(selectedProjectForBOM?._id)}
+      >
+        Save BOM
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={() => setBom(null)}
+      >
+        Close
+      </Button>
+    </DialogActions>
+  </Dialog>
+)}
 </>
 );
 };

@@ -5,7 +5,7 @@ import styles from './ChatComponent.module.css';
 
 const API_URL = import.meta.env.VITE_LOCAL_URL || 'http://localhost:4000';
 
-const ChatComponent = ({ projectId, user, isChatOpen = false, onClose }) => {
+const ChatComponent = ({ projectName, projectId, user, isChatOpen = false, onClose }) => {
   const [internalIsChatOpen, setInternalIsChatOpen] = useState(isChatOpen);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
@@ -91,6 +91,7 @@ const ChatComponent = ({ projectId, user, isChatOpen = false, onClose }) => {
       const messageData = {
         message: message || selectedEmoji,
         user,
+        projectName,
         projectId,
         timestamp,
         file: file ? URL.createObjectURL(file) : null,
@@ -156,7 +157,7 @@ const ChatComponent = ({ projectId, user, isChatOpen = false, onClose }) => {
       {internalIsChatOpen && (
         <div className={styles.chatWindow}>
           <div className={styles.chatHeader}>
-            <span>Live Chat - Project {projectId}</span>
+            <span>Live Chat - Project {projectName}</span>
             <div className={styles.status}></div>
             <button onClick={handleClose} className={styles.closeButton}>X</button>
           </div>

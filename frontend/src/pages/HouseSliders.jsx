@@ -37,6 +37,8 @@ const HouseSliders = () => {
     fetchProjects();
   }, [user]);
 
+  console.log("Projects", projects);
+
   // Handle the search by finished date functionality
   const handleSearch = () => {
     if (!searchDate) {
@@ -45,9 +47,9 @@ const HouseSliders = () => {
     }
 
     const filtered = projects.filter((project) => {
-      if (!project.finishedAt) return false; // Skip projects without a finishedAt date
+      if (!project.updatedAt) return false; // Skip projects without a finishedAt date
 
-      const finishedAtDate = new Date(project.finishedAt).toISOString().split('T')[0]; // Get only the date part in ISO format
+      const finishedAtDate = new Date(project.updatedAt).toISOString().split('T')[0]; // Get only the date part in ISO format
       const searchFormattedDate = new Date(searchDate).toISOString().split('T')[0]; // Get only the date part from search date
 
       // Compare both the dates
@@ -56,8 +58,8 @@ const HouseSliders = () => {
 
     // Sort filtered projects by finished date (ascending order)
     filtered.sort((a, b) => {
-      const dateA = new Date(a.finishedAt);
-      const dateB = new Date(b.finishedAt);
+      const dateA = new Date(a.updatedAt);
+      const dateB = new Date(b.updatedAt);
       return dateA - dateB; // Ascending order
     });
 
@@ -139,7 +141,10 @@ const HouseSliders = () => {
                     {project.bom?.markedUpCosts?.totalProjectCost?.toLocaleString() || "N/A"}
                   </p>
                   <p>
-                    <strong>Finished:</strong> {project.finishedAt ? new Date(project.finishedAt).toLocaleDateString() : "N/A"}
+                    <strong>Status:</strong> {project?.status ? project?.status : 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Finished At:</strong> {project?.updatedAt ? new Date(project.updatedAt).toISOString().split('T')[0] : 'N/A'}
                   </p>
                 </div>
               </Link>

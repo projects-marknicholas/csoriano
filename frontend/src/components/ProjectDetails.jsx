@@ -64,7 +64,7 @@ const ProjectDetails = () => {
           <p><strong>Created:</strong> {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : "N/A"}</p>
 
           {/* Show the finished date if available */}
-          <p><strong>Finished:</strong> {project.finishedAt ? new Date(project.finishedAt).toLocaleDateString() : "N/A"}</p>
+          <p><strong>Status:</strong> {project.status ? project.status : "N/A"}</p>
         </div>
 
         {/* Bill of Materials Section */}

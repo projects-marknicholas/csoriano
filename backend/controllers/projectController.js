@@ -656,8 +656,10 @@ const updateProject = async (req, res) => {
     await project.save();
     
     // Populate the template if needed before sending response
-    const populatedProject = await Project.findById(project._id).populate('template');
-    
+    const populatedProject = await Project.findById(project._id)
+      .populate('template')
+      .populate('location');
+
     res.status(200).json({ 
       success: true, 
       project: populatedProject 

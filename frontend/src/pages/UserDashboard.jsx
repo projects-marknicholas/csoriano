@@ -21,6 +21,7 @@ const UserDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const containerRef = useRef(null);
   const [chatProjectId, setChatProjectId] = useState(null);
+  const [chatProjectName, setChatProjectName] = useState(null);
   const [isChat, setIsChat] = useState(false);
 
   // Function to show alerts
@@ -100,7 +101,8 @@ const UserDashboard = () => {
     }
   };
 
-  const handleChat = async (projectId) => {
+  const handleChat = async (projectName, projectId) => {
+    setChatProjectName(projectName);
     setChatProjectId(projectId);
     setIsChat(true);
   };
@@ -133,7 +135,7 @@ const UserDashboard = () => {
                 <h1>{project.name}</h1>
                 <div className={styles.projectInfo}>
                   <Link to={`/project/${project._id}`} className={styles.statusbtn}>{project.status}</Link>
-                  <button onClick={() => handleChat(project._id)} className={styles.projectChat}>Chat</button>
+                  <button onClick={() => handleChat(project.name, project._id)} className={styles.projectChat}>Chat</button>
                 </div>
               </div>
             </div>
@@ -145,7 +147,7 @@ const UserDashboard = () => {
 
       {/* Only display ChatComponent if password is changed */}
       {isPasswordChanged && (
-        <ChatComponent projectId={chatProjectId} user="User" isChatOpen={isChat} onClose={() => setIsChat(false)} />
+        <ChatComponent projectName={chatProjectName} projectId={chatProjectId} user="User" isChatOpen={isChat} onClose={() => setIsChat(false)} />
       )}
 
       {/* Alert Modal */}

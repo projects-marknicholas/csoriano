@@ -13,17 +13,18 @@ const getMaterials = async(req, res) => {
 
 // Create a new material
 const createMaterial = async(req, res) => {
-  const { description, unit, cost, specifications, brands, supplier } = req.body;
+  const { description, unit, cost, specifications, supplier, brand} = req.body;
+
 
   try {
-    // Create the material with all fields, including specifications, brands, and supplier
+    // Create the material with all fields, including specifications, brand, and supplier
     const material = await Material.create({
       description,
       unit,
       cost,
-      specifications,  // Store specifications as an array of strings
-      brands,           // Store brands as an array of strings
-      supplier,         // Store supplier name
+      specifications,
+      supplier,
+      brand,     
     });
     
     res.status(200).json(material);
@@ -71,7 +72,7 @@ const deleteMaterial = async (req, res) => {
 // Update a material
 const updateMaterial = async (req, res) => {
   const { id } = req.params;
-  const { description, unit, cost, specifications, brands, supplier } = req.body;
+  const { description, unit, cost, specifications, supplier, brand} = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(404).json({ error: 'ID does not exist' });
@@ -80,7 +81,7 @@ const updateMaterial = async (req, res) => {
   try {
     const updatedMaterial = await Material.findOneAndUpdate(
       { _id: id },
-      { description, unit, cost, specifications, brands, supplier },
+      { description, unit, cost, specifications, supplier, brand},
       { new: true }
     );
 

@@ -24,22 +24,19 @@ import { useAuthContext } from "../hooks/useAuthContext";
 import Navbar from "../components/Navbar";
 import ConfirmDeleteMaterialModal from "../components/ConfirmDeleteMaterialModal";
 
-// Valid units, specifications, suppliers, and brands for the dropdowns
+// Valid units, specifications, supplier, and brand for the dropdowns
+const validbrand = [
+  'brand a','brand b','brand c','brand d','brand e'
+];
+const validSpecifications = [
+  's1','s2','s3','s4','s5'
+];
+const validSupplier = [
+  'supplier a','supplier b','supplier c','supplier d','supplier e'
+];
 const validUnits = [
   'lot', 'cu.m', 'bags', 'pcs', 'shts', 'kgs', 'gal', 'liters',
   'set', 'm', 'L-m', 'sheets', 'pieces', 'meters', 'bar', 'tin', 'tubes', 'boxes'
-];
-
-const validSpecifications = [
-  'Durability', 'Size', 'Color', 'Weight', 'Capacity'
-];
-
-const validSuppliers = [
-  'Supplier A', 'Supplier B', 'Supplier C', 'Supplier D', 'Supplier E'
-];
-
-const validBrands = [
-  'Brand X', 'Brand Y', 'Brand Z', 'Brand W', 'Brand V'
 ];
 
 const Materials = () => {
@@ -49,9 +46,9 @@ const Materials = () => {
     description: '',
     unit: '',
     cost: 0,
+    specifications: '',
     supplier: '',
-    brands: '',
-    specifications: ''
+    brand: '',
   });
   const { user } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,9 +56,9 @@ const Materials = () => {
     description: '',
     unit: validUnits[0],
     cost: 0,
-    supplier: validSuppliers[0],
-    brands: validBrands[0],
-    specifications: validSpecifications[0]  // Default to the first specification
+    specifications: '',
+    supplier: '',
+    brand: '',
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -80,6 +77,7 @@ const Materials = () => {
           },
         });
         setMaterials(response.data);
+        console.log(response.data);
       } catch (error) {
         console.error('Error fetching materials:', error.response?.data || error.message);
       } finally {
@@ -96,9 +94,9 @@ const Materials = () => {
       description: material.description,
       unit: material.unit,
       cost: material.cost === 0 ? "" : material.cost,
-      supplier: material.supplier || validSuppliers[0],  // Default to first supplier
-      brands: material.brands || validBrands[0],  // Default to first brand
-      specifications: material.specifications || validSpecifications[0] // Set the existing specification if available
+      supplier: material.supplier,
+      brand: material.brand,
+      specifications: material.specifications,
     });
   };
 
@@ -155,8 +153,8 @@ const Materials = () => {
 
   const handleCreate = async () => {
     try {
-      if (!newMaterial.description || !newMaterial.unit || newMaterial.cost < 0 || !newMaterial.specifications || !newMaterial.supplier || !newMaterial.brands) {
-        console.error('All fields are required, cost cannot be negative, and specification, supplier, and brand must be valid.');
+      if (!newMaterial.description || !newMaterial.unit || newMaterial.cost < 0 || !newMaterial.specifications || !newMaterial.supplier || !newMaterial.brand) {
+        console.error('All fields are required, cost cannot be negative must be valid.');
         return;
       }
 
@@ -171,9 +169,9 @@ const Materials = () => {
         description: '',
         unit: validUnits[0],
         cost: 0,
-        supplier: validSuppliers[0],
-        brands: validBrands[0],
-        specifications: validSpecifications[0]  // Reset to default specification
+        specifications: '',
+        supplier: '',
+        brand: '',
       });
       setIsModalOpen(false);
     } catch (error) {
@@ -237,9 +235,9 @@ const Materials = () => {
                   <TableCell><strong>Material</strong></TableCell>
                   <TableCell><strong>Unit</strong></TableCell>
                   <TableCell><strong>Unit Cost</strong></TableCell>
-                  <TableCell><strong>Supplier</strong></TableCell>
-                  <TableCell><strong>Brands</strong></TableCell>
                   <TableCell><strong>Specifications</strong></TableCell>
+                  <TableCell><strong>Supplier</strong></TableCell>
+                  <TableCell><strong>brand</strong></TableCell>
                   <TableCell><strong>Date Created</strong></TableCell>
                   <TableCell><strong>Actions</strong></TableCell>
                 </TableRow>
@@ -300,12 +298,35 @@ const Materials = () => {
                     <TableCell>
                       {isEditing === material._id ? (
                         <FormControl fullWidth>
-                          <InputLabel>Supplier</InputLabel>
+                          <InputLabel>specifications</InputLabel>
+                          <Select
+                            value={editedMaterial.specifications}
+                            onChange={(e) =>
+                              setEditedMaterial({ ...editedMaterial, specifications: e.target.value })
+                            }
+                          >
+                            {validSpecifications.map((spec) => (
+                              <MenuItem key={spec} value={spec}>
+                                {spec}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        material.specifications || 'N/A'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isEditing === material._id ? (
+                        <FormControl fullWidth>
+                          <InputLabel>supplier</InputLabel>
                           <Select
                             value={editedMaterial.supplier}
-                            onChange={(e) => setEditedMaterial({ ...editedMaterial, supplier: e.target.value })}
+                            onChange={(e) =>
+                              setEditedMaterial({ ...editedMaterial, supplier: e.target.value })
+                            }
                           >
-                            {validSuppliers.map((supplier) => (
+                            {validSupplier.map((supplier) => (
                               <MenuItem key={supplier} value={supplier}>
                                 {supplier}
                               </MenuItem>
@@ -319,12 +340,14 @@ const Materials = () => {
                     <TableCell>
                       {isEditing === material._id ? (
                         <FormControl fullWidth>
-                          <InputLabel>Brands</InputLabel>
+                          <InputLabel>brand</InputLabel>
                           <Select
-                            value={editedMaterial.brands}
-                            onChange={(e) => setEditedMaterial({ ...editedMaterial, brands: e.target.value })}
+                            value={editedMaterial.brand}
+                            onChange={(e) =>
+                              setEditedMaterial({ ...editedMaterial, brand: e.target.value })
+                            }
                           >
-                            {validBrands.map((brand) => (
+                            {validbrand.map((brand) => (
                               <MenuItem key={brand} value={brand}>
                                 {brand}
                               </MenuItem>
@@ -332,26 +355,7 @@ const Materials = () => {
                           </Select>
                         </FormControl>
                       ) : (
-                        material.brands || 'N/A'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {isEditing === material._id ? (
-                        <FormControl fullWidth>
-                          <InputLabel>Specifications</InputLabel>
-                          <Select
-                            value={editedMaterial.specifications}
-                            onChange={(e) => setEditedMaterial({ ...editedMaterial, specifications: e.target.value })}
-                          >
-                            {validSpecifications.map((spec) => (
-                              <MenuItem key={spec} value={spec}>
-                                {spec}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      ) : (
-                        material.specifications || 'N/A'
+                        material.brand || 'N/A'
                       )}
                     </TableCell>
                     <TableCell>{new Date(material.createdAt).toLocaleDateString()}</TableCell>
@@ -433,7 +437,7 @@ const Materials = () => {
                 value={newMaterial.supplier}
                 onChange={(e) => setNewMaterial({ ...newMaterial, supplier: e.target.value })}
               >
-                {validSuppliers.map((supplier) => (
+                {validSupplier.map((supplier) => (
                   <MenuItem key={supplier} value={supplier}>
                     {supplier}
                   </MenuItem>
@@ -441,12 +445,12 @@ const Materials = () => {
               </Select>
             </FormControl>
             <FormControl fullWidth margin="normal">
-              <InputLabel>Brands</InputLabel>
+              <InputLabel>brand</InputLabel>
               <Select
-                value={newMaterial.brands}
-                onChange={(e) => setNewMaterial({ ...newMaterial, brands: e.target.value })}
+                value={newMaterial.brand}
+                onChange={(e) => setNewMaterial({ ...newMaterial, brand: e.target.value })}
               >
-                {validBrands.map((brand) => (
+                {validbrand.map((brand) => (
                   <MenuItem key={brand} value={brand}>
                     {brand}
                   </MenuItem>
