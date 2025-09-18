@@ -21,6 +21,9 @@ import Templates from './pages/Templates';
 import HouseSliders from './pages/HouseSliders'
 import { CssBaseline } from '@mui/material';
 import ProjectDetails from './components/ProjectDetails';
+import Brands from './pages/Brands';
+import Specifications from './pages/Specifications';
+import Suppliers from './pages/Suppliers';
 
 function App() {
   const location = useLocation();
@@ -35,6 +38,9 @@ function App() {
       "/UserDashboard": "User Dashboard",
       "/project/:projectId": "Project Progress",
       "/DesignEngineerDashboard": "DesignEngineer Dashboard",
+      "/Brands": "Brands",
+      "/Specifications": "Specifications",
+      "/Suppliers": "Suppliers",
       "/Templates": "Templates",
       "/ProjectList": "Project List",
       "/Generator": "Generator",
@@ -88,6 +94,30 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <Location />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Brands"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Brands />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Specifications"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Specifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Suppliers"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Suppliers />
             </ProtectedRoute>
           }
         />

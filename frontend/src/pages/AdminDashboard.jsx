@@ -117,6 +117,36 @@ const AdminDashboard = () => {
                 <div className={styles.cardText}>LOCATIONS</div>
               </div>
             </Link>
+            <Link to="/Brands" className={styles.dashboardCard}>
+              <img
+                src={Picture}
+                alt="Brands"
+                className={styles.dashboardImage}
+              />
+              <div className={styles.dashboardOverlay}>
+                <div className={styles.cardText}>BRANDS</div>
+              </div>
+            </Link>
+            <Link to="/Specifications" className={styles.dashboardCard}>
+              <img
+                src={Picture}
+                alt="Specifications"
+                className={styles.dashboardImage}
+              />
+              <div className={styles.dashboardOverlay}>
+                <div className={styles.cardText}>SPECIFICATIONS</div>
+              </div>
+            </Link>
+            <Link to="/Suppliers" className={styles.dashboardCard}>
+              <img
+                src={Picture}
+                alt="Suppliers"
+                className={styles.dashboardImage}
+              />
+              <div className={styles.dashboardOverlay}>
+                <div className={styles.cardText}>SUPPLIERS</div>
+              </div>
+            </Link>
           </>
         ) : (
           <div className={styles.blockingOverlay}>

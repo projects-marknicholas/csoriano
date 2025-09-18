@@ -24,20 +24,7 @@ import { useAuthContext } from "../hooks/useAuthContext";
 import Navbar from "../components/Navbar";
 import ConfirmDeleteMaterialModal from "../components/ConfirmDeleteMaterialModal";
 
-// Valid units, specifications, supplier, and brand for the dropdowns
-const validbrand = [
-  'brand a','brand b','brand c','brand d','brand e'
-];
-const validSpecifications = [
-  's1','s2','s3','s4','s5'
-];
-const validSupplier = [
-  'supplier a','supplier b','supplier c','supplier d','supplier e'
-];
-const validUnits = [
-  'lot', 'cu.m', 'bags', 'pcs', 'shts', 'kgs', 'gal', 'liters',
-  'set', 'm', 'L-m', 'sheets', 'pieces', 'meters', 'bar', 'tin', 'tubes', 'boxes'
-];
+const BASE_URL = "http://localhost:4000/api/dropdowns";
 
 const Materials = () => {
   const [materials, setMaterials] = useState([]);
@@ -54,7 +41,7 @@ const Materials = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [newMaterial, setNewMaterial] = useState({
     description: '',
-    unit: validUnits[0],
+    unit: '',
     cost: 0,
     specifications: '',
     supplier: '',
@@ -64,6 +51,17 @@ const Materials = () => {
   const [loading, setLoading] = useState(true);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [materialToDelete, setMaterialToDelete] = useState(null);
+  
+  // New state for dynamic dropdowns
+  const [brands, setBrands] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [specifications, setSpecifications] = useState([]);
+  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+
+  const validUnits = [
+    'lot', 'cu.m', 'bags', 'pcs', 'shts', 'kgs', 'gal', 'liters',
+    'set', 'm', 'L-m', 'sheets', 'pieces', 'meters', 'bar', 'tin', 'tubes', 'boxes'
+  ];
 
   useEffect(() => {
     if (!user || !user.token) return;
@@ -86,6 +84,43 @@ const Materials = () => {
     };
 
     fetchMaterials();
+  }, [user]);
+
+  // Fetch dropdown data when user is available
+  useEffect(() => {
+    if (!user || !user.token) return;
+
+    const fetchDropdownData = async () => {
+      setLoadingDropdowns(true);
+      try {
+        // Fetch brands
+        const brandsRes = await fetch(`${BASE_URL}/brands`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        const brandsData = await brandsRes.json();
+        if (brandsRes.ok) setBrands(brandsData);
+
+        // Fetch suppliers
+        const suppliersRes = await fetch(`${BASE_URL}/suppliers`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        const suppliersData = await suppliersRes.json();
+        if (suppliersRes.ok) setSuppliers(suppliersData);
+
+        // Fetch specifications
+        const specsRes = await fetch(`${BASE_URL}/specifications`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        const specsData = await specsRes.json();
+        if (specsRes.ok) setSpecifications(specsData);
+      } catch (error) {
+        console.error('Error fetching dropdown data:', error);
+      } finally {
+        setLoadingDropdowns(false);
+      }
+    };
+
+    fetchDropdownData();
   }, [user]);
 
   const handleEdit = (material) => {
@@ -237,7 +272,7 @@ const Materials = () => {
                   <TableCell><strong>Unit Cost</strong></TableCell>
                   <TableCell><strong>Specifications</strong></TableCell>
                   <TableCell><strong>Supplier</strong></TableCell>
-                  <TableCell><strong>brand</strong></TableCell>
+                  <TableCell><strong>Brand</strong></TableCell>
                   <TableCell><strong>Date Created</strong></TableCell>
                   <TableCell><strong>Actions</strong></TableCell>
                 </TableRow>
@@ -298,16 +333,16 @@ const Materials = () => {
                     <TableCell>
                       {isEditing === material._id ? (
                         <FormControl fullWidth>
-                          <InputLabel>specifications</InputLabel>
+                          <InputLabel>Specifications</InputLabel>
                           <Select
                             value={editedMaterial.specifications}
                             onChange={(e) =>
                               setEditedMaterial({ ...editedMaterial, specifications: e.target.value })
                             }
                           >
-                            {validSpecifications.map((spec) => (
-                              <MenuItem key={spec} value={spec}>
-                                {spec}
+                            {specifications.map((spec) => (
+                              <MenuItem key={spec._id} value={spec.name}>
+                                {spec.name}
                               </MenuItem>
                             ))}
                           </Select>
@@ -319,16 +354,16 @@ const Materials = () => {
                     <TableCell>
                       {isEditing === material._id ? (
                         <FormControl fullWidth>
-                          <InputLabel>supplier</InputLabel>
+                          <InputLabel>Supplier</InputLabel>
                           <Select
                             value={editedMaterial.supplier}
                             onChange={(e) =>
                               setEditedMaterial({ ...editedMaterial, supplier: e.target.value })
                             }
                           >
-                            {validSupplier.map((supplier) => (
-                              <MenuItem key={supplier} value={supplier}>
-                                {supplier}
+                            {suppliers.map((supplier) => (
+                              <MenuItem key={supplier._id} value={supplier.name}>
+                                {supplier.name}
                               </MenuItem>
                             ))}
                           </Select>
@@ -340,16 +375,16 @@ const Materials = () => {
                     <TableCell>
                       {isEditing === material._id ? (
                         <FormControl fullWidth>
-                          <InputLabel>brand</InputLabel>
+                          <InputLabel>Brand</InputLabel>
                           <Select
                             value={editedMaterial.brand}
                             onChange={(e) =>
                               setEditedMaterial({ ...editedMaterial, brand: e.target.value })
                             }
                           >
-                            {validbrand.map((brand) => (
-                              <MenuItem key={brand} value={brand}>
-                                {brand}
+                            {brands.map((brand) => (
+                              <MenuItem key={brand._id} value={brand.name}>
+                                {brand.name}
                               </MenuItem>
                             ))}
                           </Select>
@@ -431,50 +466,57 @@ const Materials = () => {
               fullWidth
               margin="normal"
             />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Supplier</InputLabel>
-              <Select
-                value={newMaterial.supplier}
-                onChange={(e) => setNewMaterial({ ...newMaterial, supplier: e.target.value })}
-              >
-                {validSupplier.map((supplier) => (
-                  <MenuItem key={supplier} value={supplier}>
-                    {supplier}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>brand</InputLabel>
-              <Select
-                value={newMaterial.brand}
-                onChange={(e) => setNewMaterial({ ...newMaterial, brand: e.target.value })}
-              >
-                {validbrand.map((brand) => (
-                  <MenuItem key={brand} value={brand}>
-                    {brand}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Specifications</InputLabel>
-              <Select
-                value={newMaterial.specifications}
-                onChange={(e) => setNewMaterial({ ...newMaterial, specifications: e.target.value })}
-              >
-                {validSpecifications.map((spec) => (
-                  <MenuItem key={spec} value={spec}>
-                    {spec}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {loadingDropdowns ? (
+              <CircularProgress size={24} sx={{ display: 'block', margin: '16px auto' }} />
+            ) : (
+              <>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Supplier</InputLabel>
+                  <Select
+                    value={newMaterial.supplier}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, supplier: e.target.value })}
+                  >
+                    {suppliers.map((supplier) => (
+                      <MenuItem key={supplier._id} value={supplier.name}>
+                        {supplier.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Brand</InputLabel>
+                  <Select
+                    value={newMaterial.brand}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, brand: e.target.value })}
+                  >
+                    {brands.map((brand) => (
+                      <MenuItem key={brand._id} value={brand.name}>
+                        {brand.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Specifications</InputLabel>
+                  <Select
+                    value={newMaterial.specifications}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, specifications: e.target.value })}
+                  >
+                    {specifications.map((spec) => (
+                      <MenuItem key={spec._id} value={spec.name}>
+                        {spec.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </>
+            )}
             <Button
               variant="contained"
               onClick={handleCreate}
               sx={{ mt: 2, backgroundColor: "#3f5930", "&:hover": { backgroundColor: "#6b7c61" } }}
               fullWidth
+              disabled={loadingDropdowns}
             >
               Create Material
             </Button>

@@ -234,64 +234,69 @@ const Navbar = () => {
             }}
           >
             {/* Notifications Bell */}
-            <IconButton
-              onClick={toggleNotifications}
-              sx={{
-                color: "#a7b194",
-                "&:hover": {
-                  color: "#6b7c61",
-                },
-              }}
-            >
-              <Badge badgeContent={unreadCount} color="error">
-                <FaBell style={{ fontSize: "20px" }} />
-              </Badge>
-            </IconButton>
+            
+            {user?.role !== "admin" && (
+              <IconButton
+                onClick={toggleNotifications}
+                sx={{
+                  color: "#a7b194",
+                  "&:hover": {
+                    color: "#6b7c61",
+                  },
+                }}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <FaBell style={{ fontSize: "20px" }} />
+                </Badge>
+              </IconButton>
+            )}
 
             {/* Notification Menu */}
-            <Menu
-              anchorEl={notificationAnchor}
-              open={Boolean(notificationAnchor)}
-              onClose={closeNotifications}
-              PaperProps={{
-                style: {
-                  width: '350px',
-                  maxHeight: '400px',
-                },
-              }}
-            >
-              <MenuItem disabled>
-                <Typography variant="h6">Notifications</Typography>
-              </MenuItem>
-              <Divider />
-              {notifications.length === 0 ? (
+            {user?.role !== "admin" && (
+              <Menu
+                anchorEl={notificationAnchor}
+                open={Boolean(notificationAnchor)}
+                onClose={closeNotifications}
+                PaperProps={{
+                  style: {
+                    width: '350px',
+                    maxHeight: '400px',
+                  },
+                }}
+              >
                 <MenuItem disabled>
-                  <ListItemText primary="No notifications" />
+                  <Typography variant="h6">Notifications</Typography>
                 </MenuItem>
-              ) : (
-                <List sx={{ width: '100%', p: 0 }}>
-                  {notifications.slice(0, 5).map((notification) => (
-                    <ListItem
-                      key={notification._id}
-                      button
-                      onClick={() => handleNotificationClick(notification)}
-                      sx={{
-                        backgroundColor: notification.isRead ? 'transparent' : '#f0f7ff',
-                        borderLeft: notification.isRead ? 'none' : '3px solid #3f51b5',
-                      }}
-                    >
-                      <ListItemIcon>
-                        <FaComments />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={notification.message}
-                        secondary={new Date(notification.createdAt).toLocaleString()}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </Menu>
+                <Divider />
+                {notifications.length === 0 ? (
+                  <MenuItem disabled>
+                    <ListItemText primary="No notifications" />
+                  </MenuItem>
+                ) : (
+                  <List sx={{ width: '100%', p: 0 }}>
+                    {notifications.slice(0, 5).map((notification) => (
+                      <ListItem
+                        key={notification._id}
+                        button
+                        onClick={() => handleNotificationClick(notification)}
+                        sx={{
+                          backgroundColor: notification.isRead ? 'transparent' : '#f0f7ff',
+                          borderLeft: notification.isRead ? 'none' : '3px solid #3f51b5',
+                        }}
+                      >
+                        <ListItemIcon>
+                          <FaComments />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={notification.message}
+                          secondary={new Date(notification.createdAt).toLocaleString()}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Menu>
+            )}
 
             <Typography
               variant="body1"

@@ -9,6 +9,7 @@ const bomRoutes = require('./routes/bomRoute');
 const userRoutes = require('./routes/usersRoute');
 const projectRoutes = require('./routes/projectRoute');
 const preprojectRoutes = require('./routes/preprojectRoute');
+const dropdownsRoute = require('./routes/dropdownsRoute');
 const { authMiddleware, authorizeRoles } = require('./middlewares/authMiddleware');
 const cors = require('cors');
 const cron = require('node-cron'); 
@@ -26,7 +27,7 @@ app.use((req, res, next) => {
 
 
 app.use(cors({
-  origin: ' http://localhost:5173', 
+  origin: 'http://localhost:5173', 
   // origin: 'https://csoriano.netlify.app',
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], 
   allowedHeaders: ['Content-Type', 'Authorization'], 
@@ -45,6 +46,7 @@ app.use('/api/templates', authMiddleware, authorizeRoles(['designEngineer', 'adm
 app.use('/api/bom', authMiddleware, authorizeRoles(['designEngineer', 'admin']), bomRoutes);
 app.use('/api/project', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), projectRoutes);
 app.use('/api/preprojects', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), preprojectRoutes);
+app.use('/api/dropdowns', authMiddleware, authorizeRoles(['designEngineer', 'admin', 'user']), dropdownsRoute);
 
 // Function to calculate and update project progress
 const updateDailyProgress = async () => {

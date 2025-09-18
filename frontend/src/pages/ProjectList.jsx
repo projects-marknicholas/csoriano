@@ -51,6 +51,7 @@ import {
 } from "@mui/icons-material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import GeneratorModal from "../components/GeneratorModal";
+import { Close, SwapHoriz  } from '@mui/icons-material';
 
 const Notification = ({ message, onClose }) => (
   <div
@@ -93,6 +94,99 @@ const LoadingSpinner = () => (
     <p>Please wait, fetching projects...</p>
   </div>
 );
+
+const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToReplace, user }) => {
+  const [materials, setMaterials] = useState([]);
+  const [filteredMaterials, setFilteredMaterials] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (isOpen && user && user.token) {
+      axios.get(`${import.meta.env.VITE_LOCAL_URL}/api/materials`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+        .then((response) => {
+          setMaterials(response.data);
+          setFilteredMaterials(response.data);
+        })
+        .catch((error) => {
+          console.error('Error fetching materials:', error);
+        });
+    }
+  }, [isOpen, user]);
+
+  useEffect(() => {
+    if (searchTerm === "") {
+      setFilteredMaterials(materials);
+    } else {
+      const filtered = materials.filter((material) =>
+        (material.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredMaterials(filtered);
+    }
+  }, [searchTerm, materials]);
+
+  return (
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        Replace Material: {materialToReplace?.description || ''}
+        <IconButton onClick={onClose} style={{ position: 'absolute', right: 8, top: 8 }}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <TextField
+          fullWidth
+          variant="outlined"
+          label="Search materials"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          margin="dense"
+        />
+        {filteredMaterials.length > 0 ? (
+          <TableContainer style={{ maxHeight: 400 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Cost (₱)</TableCell>
+                  <TableCell align="center">Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredMaterials.map((material) => (
+                  <TableRow key={material._id} hover>
+                    <TableCell>{material.description || 'No Description Available'}</TableCell>
+                    <TableCell>{material.cost.toFixed(2)}</TableCell>
+                    <TableCell align="center">
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        size="small"
+                        onClick={() => onMaterialSelect(material)}
+                      >
+                        Select
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography>No materials found</Typography>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="secondary">
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
@@ -148,6 +242,8 @@ const ProjectList = () => {
   const [chatProjectId, setChatProjectId] = useState(null);
   const [chatProjectName, setChatProjectName] = useState(null);
   const [isChat, setIsChat] = useState(false);
+  const [materialToReplace, setMaterialToReplace] = useState(null);
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
 
   // BOM
   const [generatorModalOpen, setGeneratorModalOpen] = useState(false);
@@ -165,7 +261,111 @@ const ProjectList = () => {
   const [isLoadingBOM, setIsLoadingBOM] = useState(false);
   const [selectedProjectForBOM, setSelectedProjectForBOM] = useState(null);
 
-  const handleChange = (e) => {
+const handleReplaceClick = (material) => {
+  setMaterialToReplace(material);
+  setMaterialModalOpen(true);
+};
+
+const handleMaterialSelect = (newMaterial) => {
+  if (materialToReplace && bom) {
+    // Update the materials with the selected replacement material and recalculate total amounts
+    const updatedCategories = bom.categories.map((category) => {
+      const updatedMaterials = category.materials.map((material) => {
+        if (material._id === materialToReplace._id) {
+          return {
+            ...material,
+            description: newMaterial.description,
+            cost: parseFloat(newMaterial.cost),
+            totalAmount: parseFloat((parseFloat(material.quantity) * parseFloat(newMaterial.cost)).toFixed(2)),
+
+          };
+        }
+        return material;
+      });
+    
+      const categoryTotal = updatedMaterials.reduce((sum, material) => sum + (parseFloat(material.totalAmount) || 0), 0);
+    
+      return { ...category, materials: updatedMaterials, categoryTotal: parseFloat(categoryTotal.toFixed(2)) };
+    });
+    
+
+    // Recalculate the project cost and marked-up cost
+    const { originalTotalProjectCost, markedUpTotalProjectCost } = calculateUpdatedCosts({
+      ...bom,
+      categories: updatedCategories,
+    });
+
+    
+    setBom({
+      ...bom,
+      categories: updatedCategories,
+      originalCosts: {
+        ...bom.originalCosts,
+        totalProjectCost: originalTotalProjectCost,
+      },
+      markedUpCosts: {
+        ...bom.markedUpCosts,
+        totalProjectCost: markedUpTotalProjectCost,
+      },
+    });
+
+    // Close the material replacement modal and show success alert
+    setMaterialModalOpen(false);
+    showAlert("Success", "Material replaced successfully.", "success");
+  }
+};
+
+const calculateUpdatedCosts = (bom) => {
+  const totalMaterialsCost = bom.categories.reduce((sum, category) => {
+    const categoryTotal = category.materials.reduce((subSum, material) => {
+      const materialTotal = parseFloat(material.totalAmount) || 0;
+      return subSum + materialTotal;
+    }, 0);
+    return sum + categoryTotal;
+  }, 0);
+
+  const originalLaborCost = parseFloat(bom.originalCosts.laborCost) || 0;
+  const originalTotalProjectCost = totalMaterialsCost + originalLaborCost;
+
+  const markupPercentage = parseFloat(bom.projectDetails.location.markup) / 100 || 0;
+  const markedUpTotalProjectCost = originalTotalProjectCost + (originalTotalProjectCost * markupPercentage);
+
+  return {
+    originalTotalProjectCost,
+    markedUpTotalProjectCost,
+  };
+};
+
+// const handleSaveBOM = () => {
+//   if (!selectedProject || !selectedProject._id) {
+//     showAlert("Error", "No project selected. Please select a project before saving.", "error");
+//     return;
+//   }
+
+//   const payload = {
+//     bom: {
+//       projectDetails: bom.projectDetails,
+//       categories: bom.categories,
+//       originalCosts: bom.originalCosts,
+//       markedUpCosts: bom.markedUpCosts,
+//     },
+//   };
+//   console.log('Selected Project ID:', selectedProject._id);
+
+//   axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/project/${selectedProject._id}/boms`, payload, {
+//     headers: { Authorization: `Bearer ${user.token}` },
+//   })
+//     .then(() => {
+//       showAlert("Success", "BOM saved to the project!", "success");
+//     })
+//     .catch((error) => {
+//       console.error('Failed to save BOM to project:', error.response || error.message || error);
+//       const errorMessage = error.response?.data?.message || error.message || 'Failed to save BOM to the project.';
+//       showAlert("Error", errorMessage, "error");
+//     });
+// };
+
+const handleChange = (e) => {
   const { name, value } = e.target;
   const updatedFormData = { ...formData };
   if (name === 'numFloors' && value > 5) {
@@ -254,19 +454,20 @@ const handleGenerateBOMPDF = (version = 'client') => {
   if (version === 'client') {
     doc.text(`Grand Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
     yPosition += 15;
-    doc.autoTable({
-      head: [['#', 'Category', 'Total Amount (PHP)']],
-      body: bom.categories.map((cat, i) => [i + 1, cat.category.toUpperCase(), `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(cat.materials.reduce((sum, m) => sum + m.totalAmount, 0))}`]),
-      startY: yPosition,
-      headStyles: { fillColor: [41, 128, 185] },
-      bodyStyles: { textColor: [44, 62, 80] },
+    bom.categories.forEach((cat, i) => {
+      doc.text(cat.category.toUpperCase(), 10, yPosition);
+      yPosition += 5;
+      doc.autoTable({
+        head: [['Item', 'Quantity', 'Unit Cost (PHP)', 'Total (PHP)']],
+        body: cat.materials.map(m => [m.item, m.quantity || 'N/A', `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.cost)}`, `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.totalAmount)}`]),
+        startY: yPosition,
+      });
+      yPosition = doc.lastAutoTable.finalY + 5;
     });
   } else {
     // Simplified design engineer version for brevity
-    doc.text(`Original Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.originalCosts.totalProjectCost || 0)}`, 10, yPosition);
-    yPosition += 10;
-    doc.text(`Marked-Up Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
-    yPosition += 20;
+    doc.text(`Grand Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
+    yPosition += 15;
     bom.categories.forEach((cat, i) => {
       doc.text(cat.category.toUpperCase(), 10, yPosition);
       yPosition += 5;
@@ -1562,6 +1763,8 @@ const handleLocationSelect = (locationName) => {
     },
   });
 
+  console.log("BOM", selectedProjectForBOM);
+
   return (
     <>
       <ThemeProvider theme={theme}>
@@ -2835,6 +3038,26 @@ const handleLocationSelect = (locationName) => {
         <Table>
           <TableBody>
             <TableRow>
+              <TableCell><strong>Project Name</strong></TableCell>
+              <TableCell>{selectedProjectForBOM?.name}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Project Owner</strong></TableCell>
+              <TableCell>{selectedProjectForBOM?.user}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Room Count</strong></TableCell>
+              <TableCell>{selectedProjectForBOM?.roomCount}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Foundation Depth</strong></TableCell>
+              <TableCell>{selectedProjectForBOM?.foundationDepth}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><strong>Ground Total</strong></TableCell>
+              <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}</TableCell>
+            </TableRow>
+            <TableRow>
               <TableCell><strong>Total Area</strong></TableCell>
               <TableCell>{bom.projectDetails.totalArea} sqm</TableCell>
             </TableRow>
@@ -2862,6 +3085,27 @@ const handleLocationSelect = (locationName) => {
         </Table>
       </TableContainer>
       <Box mt={4}>
+        <Typography variant="h6">Cost Details</Typography>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Total Project Cost</TableCell>
+                <TableCell>Labor Cost</TableCell>
+                <TableCell>Location Markup</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow>
+                <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}</TableCell>
+                <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.laborCost || 0)}</TableCell>
+                <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.projectDetails.location.markup || 0)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+      <Box mt={4}>
         <Typography variant="h6">Materials</Typography>
         <TableContainer>
           <Table>
@@ -2878,8 +3122,19 @@ const handleLocationSelect = (locationName) => {
                 <TableRow key={`${ci}-${mi}`}>
                   <TableCell>{cat.category.toUpperCase()}</TableCell>
                   <TableCell>{mat.item}</TableCell>
-                  <TableCell>{mat.quantity || 'N/A'}</TableCell>
+                  <TableCell>{mat.quantity ? Math.ceil(mat.quantity) : 'N/A'}</TableCell>
                   <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(mat.totalAmount || 0)}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="small"
+                      onClick={() => handleReplaceClick(mat)}
+                      startIcon={<SwapHoriz />}
+                    >
+                      Replace
+                    </Button>
+                  </TableCell>
                 </TableRow>
               )))}
             </TableBody>
@@ -2919,6 +3174,14 @@ const handleLocationSelect = (locationName) => {
     </DialogActions>
   </Dialog>
 )}
+
+<MaterialSearchModal
+  isOpen={materialModalOpen}
+  onClose={() => setMaterialModalOpen(false)}
+  onMaterialSelect={handleMaterialSelect}
+  materialToReplace={materialToReplace}
+  user={user}
+/>
 </>
 );
 };
