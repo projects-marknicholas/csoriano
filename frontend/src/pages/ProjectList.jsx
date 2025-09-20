@@ -110,6 +110,7 @@ const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToRepl
         .then((response) => {
           setMaterials(response.data);
           setFilteredMaterials(response.data);
+          showAlert("Success", "Material Replaced Successfully!", "success");
         })
         .catch((error) => {
           console.error('Error fetching materials:', error);
@@ -459,7 +460,7 @@ const handleGenerateBOMPDF = (version = 'client') => {
       yPosition += 5;
       doc.autoTable({
         head: [['Item', 'Quantity', 'Unit Cost (PHP)', 'Total (PHP)']],
-        body: cat.materials.map(m => [m.item, m.quantity || 'N/A', `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.cost)}`, `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.totalAmount)}`]),
+        body: cat.materials.map(m => [m.item, new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.ceil(m.quantity)) || 'N/A', `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.cost)}`, `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.totalAmount)}`]),
         startY: yPosition,
       });
       yPosition = doc.lastAutoTable.finalY + 5;
@@ -468,12 +469,14 @@ const handleGenerateBOMPDF = (version = 'client') => {
     // Simplified design engineer version for brevity
     doc.text(`Grand Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
     yPosition += 15;
+    doc.text(`Marked-Up Total: PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}`, 10, yPosition);
+    yPosition += 20;
     bom.categories.forEach((cat, i) => {
       doc.text(cat.category.toUpperCase(), 10, yPosition);
       yPosition += 5;
       doc.autoTable({
         head: [['Item', 'Quantity', 'Unit Cost (PHP)', 'Total (PHP)']],
-        body: cat.materials.map(m => [m.item, m.quantity || 'N/A', `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.cost)}`, `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.totalAmount)}`]),
+        body: cat.materials.map(m => [m.item, new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.ceil(m.quantity)) || 'N/A', `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.cost)}`, `PHP ${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(m.totalAmount)}`]),
         startY: yPosition,
       });
       yPosition = doc.lastAutoTable.finalY + 5;
@@ -3076,10 +3079,6 @@ const handleLocationSelect = (locationName) => {
             <TableRow>
               <TableCell><strong>Markup</strong></TableCell>
               <TableCell>{bom.projectDetails.location.markup}%</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><strong>Grand Total</strong></TableCell>
-              <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
