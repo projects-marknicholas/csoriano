@@ -48,6 +48,7 @@ import {
   Stop as StopIcon,
   ExpandMore as ExpandMoreIcon,
   Close as CloseIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import GeneratorModal from "../components/GeneratorModal";
@@ -95,7 +96,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToReplace, user }) => {
+const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToReplace, user, onMaterialAdd }) => {
   const [materials, setMaterials] = useState([]);
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -110,7 +111,6 @@ const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToRepl
         .then((response) => {
           setMaterials(response.data);
           setFilteredMaterials(response.data);
-          showAlert("Success", "Material Replaced Successfully!", "success");
         })
         .catch((error) => {
           console.error('Error fetching materials:', error);
@@ -132,27 +132,40 @@ const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToRepl
   return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>
-        Replace Material: {materialToReplace?.description || ''}
+        {materialToReplace ? `Replace Material: ${materialToReplace?.description || ''}` : 'Select Material'}
         <IconButton onClick={onClose} style={{ position: 'absolute', right: 8, top: 8 }}>
           <Close />
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        <TextField
-          fullWidth
-          variant="outlined"
-          label="Search materials"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          margin="dense"
-        />
+        <Box display="flex" gap={2} mb={2}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            label="Search materials"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            margin="dense"
+          />
+          {/* <Button 
+            variant="contained" 
+            color="primary"
+            onClick={onMaterialAdd}
+            sx={{ mt: 1 }}
+            startIcon={<AddIcon />}
+          >
+            Add New
+          </Button> */}
+        </Box>
         {filteredMaterials.length > 0 ? (
           <TableContainer style={{ maxHeight: 400 }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
                   <TableCell>Description</TableCell>
+                  <TableCell>Unit</TableCell>
                   <TableCell>Cost (₱)</TableCell>
+                  <TableCell>Specifications</TableCell>
                   <TableCell align="center">Action</TableCell>
                 </TableRow>
               </TableHead>
@@ -160,7 +173,9 @@ const MaterialSearchModal = ({ isOpen, onClose, onMaterialSelect, materialToRepl
                 {filteredMaterials.map((material) => (
                   <TableRow key={material._id} hover>
                     <TableCell>{material.description || 'No Description Available'}</TableCell>
-                    <TableCell>{material.cost.toFixed(2)}</TableCell>
+                    <TableCell>{material.unit || 'N/A'}</TableCell>
+                    <TableCell>{material.cost?.toFixed(2) || '0.00'}</TableCell>
+                    <TableCell>{material.specifications || 'N/A'}</TableCell>
                     <TableCell align="center">
                       <Button
                         variant="contained"
@@ -262,6 +277,17 @@ const ProjectList = () => {
   const [isLoadingBOM, setIsLoadingBOM] = useState(false);
   const [selectedProjectForBOM, setSelectedProjectForBOM] = useState(null);
 
+  // Add Material States
+  const [addMaterialModalOpen, setAddMaterialModalOpen] = useState(false);
+  const [newMaterial, setNewMaterial] = useState({
+    description: '',
+    unit: '',
+    cost: '',
+    specifications: '',
+    supplier: '',
+    brand: ''
+  });
+
 const handleReplaceClick = (material) => {
   setMaterialToReplace(material);
   setMaterialModalOpen(true);
@@ -278,7 +304,6 @@ const handleMaterialSelect = (newMaterial) => {
             description: newMaterial.description,
             cost: parseFloat(newMaterial.cost),
             totalAmount: parseFloat((parseFloat(material.quantity) * parseFloat(newMaterial.cost)).toFixed(2)),
-
           };
         }
         return material;
@@ -312,7 +337,7 @@ const handleMaterialSelect = (newMaterial) => {
 
     // Close the material replacement modal and show success alert
     setMaterialModalOpen(false);
-    showAlert("Success", "Material replaced successfully.", "success");
+    showAlert("Success", "Material granted successfully.", "success");
   }
 };
 
@@ -336,35 +361,6 @@ const calculateUpdatedCosts = (bom) => {
     markedUpTotalProjectCost,
   };
 };
-
-// const handleSaveBOM = () => {
-//   if (!selectedProject || !selectedProject._id) {
-//     showAlert("Error", "No project selected. Please select a project before saving.", "error");
-//     return;
-//   }
-
-//   const payload = {
-//     bom: {
-//       projectDetails: bom.projectDetails,
-//       categories: bom.categories,
-//       originalCosts: bom.originalCosts,
-//       markedUpCosts: bom.markedUpCosts,
-//     },
-//   };
-//   console.log('Selected Project ID:', selectedProject._id);
-
-//   axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/project/${selectedProject._id}/boms`, payload, {
-//     headers: { Authorization: `Bearer ${user.token}` },
-//   })
-//     .then(() => {
-//       showAlert("Success", "BOM saved to the project!", "success");
-//     })
-//     .catch((error) => {
-//       console.error('Failed to save BOM to project:', error.response || error.message || error);
-//       const errorMessage = error.response?.data?.message || error.message || 'Failed to save BOM to the project.';
-//       showAlert("Error", errorMessage, "error");
-//     });
-// };
 
 const handleChange = (e) => {
   const { name, value } = e.target;
@@ -496,6 +492,98 @@ const closeGeneratorModal = () => {
 const handleLocationSelect = (locationName) => {
   setSelectedLocation(locationName);
 };
+
+// Add Material Functions
+const handleAddMaterialClick = () => {
+  setMaterialModalOpen(true);
+};
+
+const handleMaterialAdd = () => {
+  setMaterialModalOpen(false);
+  setAddMaterialModalOpen(true);
+  showAlert("Success", "Material added successfully!", "success");
+};
+
+const handleCreateMaterial = async () => {
+  try {
+    if (!newMaterial.description || !newMaterial.cost || !newMaterial.unit) {
+      showAlert("Error", "Please fill in description, cost, and unit fields.", "error");
+      return;
+    }
+
+    const materialData = {
+      description: newMaterial.description,
+      unit: newMaterial.unit,
+      cost: parseFloat(newMaterial.cost),
+      specifications: newMaterial.specifications,
+      supplier: newMaterial.supplier,
+      brand: newMaterial.brand
+    };
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_LOCAL_URL}/api/materials`,
+      materialData,
+      {
+        headers: { Authorization: `Bearer ${user.token}` },
+      }
+    );
+
+    // Refresh materials list
+    const materialsResponse = await axios.get(
+      `${import.meta.env.VITE_LOCAL_URL}/api/materials`,
+      {
+        headers: { Authorization: `Bearer ${user.token}` },
+      }
+    );
+
+    setAddMaterialModalOpen(false);
+    setNewMaterial({ 
+      description: '', 
+      unit: '', 
+      cost: '', 
+      specifications: '', 
+      supplier: '', 
+      brand: '' 
+    });
+    showAlert("Success", "Material added successfully!", "success");
+    
+    // Reopen material modal with updated list
+    setMaterialModalOpen(true);
+  } catch (error) {
+    console.error('Error creating material:', error);
+    showAlert("Error", "Failed to add material. Please try again.", "error");
+  }
+};
+
+// const handleSaveBOM = (BomId) => {
+//   if (!BomId) {
+//     showAlert("Error", "No project selected. Please select a project before saving.", "error");
+//     return;
+//   }
+
+//   const payload = {
+//     bom: {
+//       projectDetails: bom.projectDetails,
+//       categories: bom.categories,
+//       originalCosts: bom.originalCosts,
+//       markedUpCosts: bom.markedUpCosts,
+//     },
+//   };
+//   console.log('Selected Project ID:', BomId);
+
+//   axios.post(`${import.meta.env.VITE_LOCAL_URL}/api/project/${BomId}/boms`, payload, {
+//     headers: { Authorization: `Bearer ${user.token}` },
+//   })
+//     .then(() => {
+//       setBom(null);
+//       showAlert("Success", "BOM saved to the project!", "success");
+//     })
+//     .catch((error) => {
+//       console.error('Failed to save BOM to project:', error.response || error.message || error);
+//       const errorMessage = error.response?.data?.message || error.message || 'Failed to save BOM to the project.';
+//       showAlert("Error", errorMessage, "error");
+//     });
+// };
   // BOM END
 
   // Pop-out notification state
@@ -3024,7 +3112,7 @@ const handleLocationSelect = (locationName) => {
     open={!!bom}
     onClose={() => setBom(null)}
     fullWidth
-    maxWidth="md"
+    maxWidth="lg"
   >
     <DialogTitle>
       Generated BOM for {selectedProjectForBOM?.name || 'Custom Project'}
@@ -3057,7 +3145,7 @@ const handleLocationSelect = (locationName) => {
               <TableCell>{selectedProjectForBOM?.foundationDepth}</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell><strong>Ground Total</strong></TableCell>
+              <TableCell><strong>Grand Total</strong></TableCell>
               <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}</TableCell>
             </TableRow>
             <TableRow>
@@ -3098,22 +3186,37 @@ const handleLocationSelect = (locationName) => {
               <TableRow>
                 <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.totalProjectCost || 0)}</TableCell>
                 <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.markedUpCosts.laborCost || 0)}</TableCell>
-                <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(bom.projectDetails.location.markup || 0)}</TableCell>
+                <TableCell>{bom.projectDetails.location.markup}%</TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
       </Box>
       <Box mt={4}>
-        <Typography variant="h6">Materials</Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">Materials</Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            onClick={handleAddMaterialClick}
+            startIcon={<AddIcon />}
+          >
+            Add Material
+          </Button>
+        </Box>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell>Category</TableCell>
                 <TableCell>Item</TableCell>
+                <TableCell>Description</TableCell>
                 <TableCell>Quantity</TableCell>
+                <TableCell>Unit</TableCell>
+                <TableCell>Unit Cost (PHP)</TableCell>
                 <TableCell>Total (PHP)</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -3121,7 +3224,10 @@ const handleLocationSelect = (locationName) => {
                 <TableRow key={`${ci}-${mi}`}>
                   <TableCell>{cat.category.toUpperCase()}</TableCell>
                   <TableCell>{mat.item}</TableCell>
+                  <TableCell>{mat.description}</TableCell>
                   <TableCell>{mat.quantity ? Math.ceil(mat.quantity) : 'N/A'}</TableCell>
+                  <TableCell>{mat.unit}</TableCell>
+                  <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(mat.cost || 0)}</TableCell>
                   <TableCell>PHP {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(mat.totalAmount || 0)}</TableCell>
                   <TableCell>
                     <Button
@@ -3178,9 +3284,75 @@ const handleLocationSelect = (locationName) => {
   isOpen={materialModalOpen}
   onClose={() => setMaterialModalOpen(false)}
   onMaterialSelect={handleMaterialSelect}
+  onMaterialAdd={handleMaterialAdd}
   materialToReplace={materialToReplace}
   user={user}
 />
+
+{/* Add Material Modal */}
+<Dialog open={addMaterialModalOpen} onClose={() => setAddMaterialModalOpen(false)} fullWidth maxWidth="sm">
+  <DialogTitle>
+    Add New Material
+    <IconButton onClick={() => setAddMaterialModalOpen(false)} style={{ position: 'absolute', right: 8, top: 8 }}>
+      <Close />
+    </IconButton>
+  </DialogTitle>
+  <DialogContent dividers>
+    <TextField
+      fullWidth
+      margin="dense"
+      label="Description"
+      value={newMaterial.description}
+      onChange={(e) => setNewMaterial({...newMaterial, description: e.target.value})}
+      required
+    />
+    <TextField
+      fullWidth
+      margin="dense"
+      label="Unit"
+      value={newMaterial.unit}
+      onChange={(e) => setNewMaterial({...newMaterial, unit: e.target.value})}
+      placeholder="e.g., bags, pieces, meters"
+      required
+    />
+    <TextField
+      fullWidth
+      margin="dense"
+      label="Cost (₱)"
+      type="number"
+      value={newMaterial.cost}
+      onChange={(e) => setNewMaterial({...newMaterial, cost: e.target.value})}
+      required
+    />
+    <TextField
+      fullWidth
+      margin="dense"
+      label="Specifications"
+      value={newMaterial.specifications}
+      onChange={(e) => setNewMaterial({...newMaterial, specifications: e.target.value})}
+    />
+    <TextField
+      fullWidth
+      margin="dense"
+      label="Supplier"
+      value={newMaterial.supplier}
+      onChange={(e) => setNewMaterial({...newMaterial, supplier: e.target.value})}
+    />
+    <TextField
+      fullWidth
+      margin="dense"
+      label="Brand"
+      value={newMaterial.brand}
+      onChange={(e) => setNewMaterial({...newMaterial, brand: e.target.value})}
+    />
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setAddMaterialModalOpen(false)}>Cancel</Button>
+    <Button onClick={handleCreateMaterial} variant="contained" color="primary">
+      Add Material
+    </Button>
+  </DialogActions>
+</Dialog>
 </>
 );
 };
